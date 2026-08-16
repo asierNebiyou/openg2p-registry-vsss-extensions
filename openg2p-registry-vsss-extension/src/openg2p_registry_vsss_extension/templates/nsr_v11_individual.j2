@@ -1,0 +1,298 @@
+{# Individual ODK payload for nsr_registration_v11/v13 -> intake-form sections. #}
+{# `expanded` is the raw ODK message.payload (no JSON-LD expansion). #}
+{%- set d  = expanded.individual_demographics or {} -%}
+{%- set cd = expanded.contact_details or {} -%}
+{%- set lc = expanded.location_contact or expanded.location_details or {} -%}
+{%- set rk = expanded.registry_keys or {} -%}
+{%- set v  = expanded.vulnerability_inclusion or {} -%}
+{%- set li = expanded.livelihoods_income or {} -%}
+{%- set assets = expanded.assets or {} -%}
+{%- set land = expanded.land_section or {} -%}
+{%- set livestock_group = expanded.livestock or {} -%}
+{%- set livestock_rows = livestock_group.livestock_details or [] -%}
+{%- set disability_group = expanded.disability_details or {} -%}
+{%- set disability_rows = disability_group.disability_repeat or [] -%}
+{%- set program = expanded.program_participation or {} -%}
+{%- set program_rows = program.program_participation_details or [] -%}
+{%- set gps = lc.gps_location or {} -%}
+{%- set coords = gps.coordinates or [] -%}
+{%- set props = gps.properties or {} -%}
+{%- set fn = (d.individual_first_name or "")|trim -%}
+{%- set mn = (d.individual_middle_name or "")|trim -%}
+{%- set ln = (d.individual_last_name  or "")|trim -%}
+{%- set full_name = (d.individual_full_name or ((fn ~ " " ~ mn ~ " " ~ ln)|trim))|trim -%}
+{#- PrefixEnum is title-case (Mr/Mrs/Miss); ODK often sends lowercase. -#}
+{%- set prefix_map = {"mr": "Mr", "mrs": "Mrs", "miss": "Miss"} -%}
+{%- set prefix_raw = (d.individual_prefix or d.prefix or "")|string|trim|lower -%}
+{%- set prefix_norm = prefix_map.get(prefix_raw, none) -%}
+{#- ResidencyStatusEnum: USUAL_MEMBER/TEMPORARY/ABSENT; ODK often sends usual. -#}
+{%- set residency_map = {"usual": "USUAL_MEMBER", "usual_member": "USUAL_MEMBER", "temporary": "TEMPORARY", "absent": "ABSENT"} -%}
+{#- GenderEnum uses OTHERS (not OTHER). -#}
+{%- set gender_map = {"male": "MALE", "female": "FEMALE", "other": "OTHERS", "others": "OTHERS"} -%}
+{#- DisplacementStatusEnum: ODK host -> HOST_COMMUNITY. -#}
+{%- set displacement_map = {"idp": "IDP", "returnee": "RETURNEE", "refugee": "REFUGEE", "host": "HOST_COMMUNITY", "host_community": "HOST_COMMUNITY"} -%}
+{#- PreferredContactMethodEnum: ODK kebele -> THROUGH_KEBELE. -#}
+{%- set contact_method_map = {"call": "CALL", "sms": "SMS", "kebele": "THROUGH_KEBELE", "through_kebele": "THROUGH_KEBELE"} -%}
+{#- EducationalStatusEnum: ODK uses spaces/hyphens/Never_Attended. -#}
+{%- set education_map = {
+  "never_attended": "NEVER_ATTEND", "never attended": "NEVER_ATTEND", "never_attend": "NEVER_ATTEND",
+  "non-formal": "NON_FORMAL", "non_formal": "NON_FORMAL", "non formal": "NON_FORMAL",
+  "primary": "PRIMARY", "secondary": "SECONDARY",
+  "higher education": "HIGHER_EDUCATION", "higher_education": "HIGHER_EDUCATION"
+} -%}
+{#- MobilePhoneTypeEnum: ODK none has no enum member -> null. -#}
+{%- set mobile_phone_map = {"basic": "BASIC", "smartphone": "SMARTPHONE", "none": none} -%}
+{#- ODK sends region/zone/woreda mnemonics; geo widget needs master-data level_value_id. -#}
+{%- set region_id_map = {
+  "addis_ababa": "ET-AA", "afar": "ET-AF", "amhara": "ET-AM", "benishangul_gumuz": "ET-BE",
+  "central_ethiopia": "ET-CE", "dire_dawa": "ET-DD", "gambela": "ET-GA", "harari": "ET-HA",
+  "oromia": "ET-OR", "sidama": "ET-SI", "somali": "ET-SO", "south_ethiopia": "ET-SN",
+  "southwest_ethiopia": "ET-SW", "tigray": "ET-TI",
+  "et-aa": "ET-AA", "et-af": "ET-AF", "et-am": "ET-AM", "et-be": "ET-BE",
+  "et-ce": "ET-CE", "et-dd": "ET-DD", "et-ga": "ET-GA", "et-ha": "ET-HA",
+  "et-or": "ET-OR", "et-si": "ET-SI", "et-so": "ET-SO", "et-sn": "ET-SN",
+  "et-sw": "ET-SW", "et-ti": "ET-TI"
+} -%}
+{%- set zone_id_map = {
+  "harari_zone": "harari_zone_ha",
+  "kilbati_zone_2": "kilbati_zone2",
+  "sidama_zone": "sidama_zone_si"
+} -%}
+{%- set region_code = lc.region_code or none -%}
+{%- set zone_code = lc.zone_subcity_code or none -%}
+{%- set woreda_code = lc.woreda_code or none -%}
+{%- set kebele_code = lc.kebele or none -%}
+{%- set region_id = region_id_map.get((region_code or "")|string|trim|lower, region_code) if region_code else none -%}
+{%- set zone_id = zone_id_map.get((zone_code or "")|string|trim|lower, zone_code) if zone_code else none -%}
+{%- set woreda_id = woreda_code if woreda_code else none -%}
+{%- set geo_lowest_id = woreda_id or zone_id or region_id or none -%}
+{%- set address_parts = [kebele_code, woreda_code, zone_code, region_code] | reject("none") | list -%}
+{%- set address_descriptor = lc.address_descriptor or (address_parts|join(", ") if address_parts else none) -%}
+{%- set geo = namespace(hierarchy=[]) -%}
+{%- if region_id -%}
+  {%- set geo.hierarchy = geo.hierarchy + [{"level": "region", "level_id": "region", "level_mnemonic": "region", "level_value_mnemonic": region_code, "level_value_id": region_id}] -%}
+{%- endif -%}
+{%- if zone_id -%}
+  {%- set geo.hierarchy = geo.hierarchy + [{"level": "sub_city", "level_id": "sub_city", "level_mnemonic": "sub_city", "level_value_mnemonic": zone_code, "level_value_id": zone_id}] -%}
+{%- endif -%}
+{%- if woreda_id -%}
+  {%- set geo.hierarchy = geo.hierarchy + [{"level": "woreda", "level_id": "woreda", "level_mnemonic": "woreda", "level_value_mnemonic": woreda_code, "level_value_id": woreda_id}] -%}
+{%- endif -%}
+{%- set livelihood_map = {
+  "crop_farming": "AGRICULTURE",
+  "crop": "AGRICULTURE",
+  "agriculture": "AGRICULTURE",
+  "livestock": "LIVESTOCK",
+  "fishing": "FISHING",
+  "daily_labor": "WAGE_LABOR",
+  "daily_labour": "WAGE_LABOR",
+  "wage_labor": "WAGE_LABOR",
+  "wage labour": "WAGE_LABOR",
+  "wage_labour": "WAGE_LABOR",
+  "self_employment": "SELF_EMPLOYMENT",
+  "self employment": "SELF_EMPLOYMENT",
+  "self_employed": "SELF_EMPLOYMENT",
+  "business": "BUSINESS_TRADE",
+  "business trade": "BUSINESS_TRADE",
+  "business_trade": "BUSINESS_TRADE",
+  "petty_trade": "BUSINESS_TRADE",
+  "trade": "BUSINESS_TRADE",
+  "government employee": "GOVERNMENT_EMPLOYEE",
+  "government_employee": "GOVERNMENT_EMPLOYEE",
+  "private sector employee": "PRIVATE_SECTOR_EMPLOYEE",
+  "private_sector_employee": "PRIVATE_SECTOR_EMPLOYEE",
+  "remittance": "REMITTANCE",
+  "pension": "PENSION",
+  "unemployed": "UNEMPLOYED",
+  "no_income": "UNEMPLOYED",
+  "other": "OTHER"
+} -%}
+{%- set primary_livelihood_raw = (li.primary_livelihood or "")|string|trim|lower -%}
+{%- set secondary_livelihood_raw = (li.secondary_livelihood or "")|string|trim|lower -%}
+{%- set primary_livelihood_key = primary_livelihood_raw|replace("\n", " ")|replace("  ", " ") -%}
+{%- set secondary_livelihood_key = secondary_livelihood_raw|replace("\n", " ")|replace("  ", " ") -%}
+{%- set primary_livelihood = livelihood_map.get(primary_livelihood_key, livelihood_map.get(primary_livelihood_raw, (primary_livelihood_raw|upper|replace(" ", "_") if primary_livelihood_raw else none))) -%}
+{%- set secondary_livelihood = livelihood_map.get(secondary_livelihood_key, livelihood_map.get(secondary_livelihood_raw, (secondary_livelihood_raw|upper|replace(" ", "_") if secondary_livelihood_raw else none))) -%}
+{%- set livestock_species_map = {
+  "cattle": "CATTLE",
+  "goats": "GOATS",
+  "sheep": "SHEEP",
+  "poultry": "POULTRY",
+  "camels": "CAMELS",
+  "equines": "EQUINES",
+  "donkeys": "EQUINES",
+  "horses": "EQUINES",
+  "other": "OTHER"
+} -%}
+{%- set livestock_count_map = {
+  "1_5": "BAND_1_5",
+  "1-5": "BAND_1_5",
+  "6_10": "BAND_6_10",
+  "6-10": "BAND_6_10",
+  "11_20": "BAND_11_20",
+  "11-20": "BAND_11_20",
+  "21_50": "BAND_21_50",
+  "21-50": "BAND_21_50",
+  "50+": "BAND_50_PLUS",
+  "50_plus": "BAND_50_PLUS",
+  "band_1_5": "BAND_1_5",
+  "band_6_10": "BAND_6_10",
+  "band_11_20": "BAND_11_20",
+  "band_21_50": "BAND_21_50",
+  "band_50_plus": "BAND_50_PLUS"
+} -%}
+{%- set education_raw = (li.educational_status or "")|string|trim -%}
+{%- set education_key = education_raw|lower|replace("_", " ")|replace("-", " ") -%}
+{%- set education_norm = education_map.get(education_key, education_map.get(education_raw|lower, none)) -%}
+{%- set mobile_raw = (li.Mobile_phone_type or li.mobile_phone_type or assets.mobile_phone_type or "")|string|trim|lower -%}
+{%- set mobile_norm = mobile_phone_map.get(mobile_raw, (mobile_raw|upper if mobile_raw and mobile_raw != "none" else none)) -%}
+{%- set gender_raw = (d.individual_gender or "")|string|trim|lower -%}
+{%- set gender_norm = gender_map.get(gender_raw, (gender_raw|upper if gender_raw else none)) -%}
+{%- set displacement_raw = (v.displacement_status or "")|string|trim|lower -%}
+{%- set displacement_norm = displacement_map.get(displacement_raw, (displacement_raw|upper if displacement_raw else none)) -%}
+{%- set contact_method_raw = (cd.preferred_contact_method or lc.preferred_contact_method or "")|string|trim|lower -%}
+{%- set contact_method_norm = contact_method_map.get(contact_method_raw, (contact_method_raw|upper if contact_method_raw else none)) -%}
+{%- set rel = expanded.household_relationship or {} -%}
+{%- set rel_head_raw = (rel.relationship_to_indvidual_head or rel.relationship_to_head or "")|string|lower -%}
+{%- set rel_is_head_raw = (rel.is__individual_head or rel.is_individual_head or "")|string|lower -%}
+{%- set residency_raw = (rel.residency_status or "")|string|trim -%}
+{%- set residency_norm = residency_map.get(residency_raw|lower, (residency_raw|upper if residency_raw else none)) -%}
+{%- macro yn(val) -%}
+{%- set s = (val or "")|string|lower -%}
+{%- if s == "yes" -%}true{%- elif s == "no" -%}false{%- else -%}null{%- endif -%}
+{%- endmacro -%}
+{
+  "individual_identifier": [
+    {
+      "has_national_id": {{ yn(rk.fayda_id) }},
+      "foundation_id": {{ (rk.faydaid or none)|tojson }},
+      "foundational_id": {{ (rk.faydaid or none)|tojson }},
+      "rid": {{ (rk.rid or none)|tojson }},
+      "rid_status": {{ (rk.rid and "PENDING" or none)|tojson }}
+    }
+  ],
+  "individual_demographic_details": [
+    {
+      "prefix": {{ (prefix_norm or none)|tojson }},
+      "first_name": {{ (fn or none)|tojson }},
+      "middle_name": {{ (mn or none)|tojson }},
+      "last_name": {{ (ln or none)|tojson }},
+      "given_name": {{ (fn or none)|tojson }},
+      "full_name": {{ (full_name or none)|tojson }},
+      "record_name": {{ (full_name or none)|tojson }},
+      "alias_names": {{ (d.individual_alias_names or none)|tojson }},
+      "gender": {{ (gender_norm or none)|tojson }},
+      "birth_date": {{ (d.individual_date_of_birth or none)|tojson }},
+      "estimated_age": {{ (d.individual_estimated_age or none)|tojson }},
+      "age_method": {{ ((d.individual_age_method or "")|upper or none)|tojson }},
+      "marital_status": {{ ((d.individual_marital_status or "")|upper or none)|tojson }},
+      "citizenship_category": {{ ((d.individual_citizenship or "")|upper or none)|tojson }},
+      "language_code": null
+    }
+  ],
+  "individual_contact_details": [
+    {
+      "primary_phone": {{ (cd.primary_phone or lc.primary_phone or none)|tojson }},
+      "alternate_phone": {{ (cd.alternate_phone or lc.alternate_phone or none)|tojson }},
+      "preferred_contact_method": {{ (contact_method_norm or none)|tojson }},
+      "contact_person_name": {{ (cd.contact_person_name or lc.contact_person_name or none)|tojson }},
+      "contact_person_phone": {{ (cd.contact_person_phone or lc.contact_person_phone or none)|tojson }}
+    }
+  ],
+  "individual_location_details": [
+    {
+      "address_descriptor": {{ (address_descriptor or none)|tojson }},
+      "kebele_code": {{ (kebele_code or none)|tojson }},
+      "locality_ea_code": {{ (lc.locality_ea_code or none)|tojson }},
+      "geo_lowest_level_value_id": {{ (geo_lowest_id or none)|tojson }},
+      "geo_code_hierarchy_json": {
+        "hierarchy": {{ geo.hierarchy | tojson }},
+        "lowest_level_value_id": {{ (geo_lowest_id or none) | tojson }},
+        "kebele": {"id": null, "name": {{ (kebele_code or none)|tojson }}},
+        "woreda": {"id": {{ (woreda_id or none)|tojson }}, "name": {{ (woreda_code or none)|tojson }}},
+        "sub_city": {"id": {{ (zone_id or none)|tojson }}, "name": {{ (zone_code or none)|tojson }}},
+        "zone": {"id": {{ (zone_id or none)|tojson }}, "name": {{ (zone_code or none)|tojson }}},
+        "region": {"id": {{ (region_id or none)|tojson }}, "name": {{ (region_code or none)|tojson }}}
+      },
+      "gps_latitude": {{ ((coords[1] if coords|length > 1 else none) or none)|tojson }},
+      "gps_longitude": {{ ((coords[0] if coords|length > 0 else none) or none)|tojson }},
+      "gps_accuracy": {{ (props.accuracy if props.accuracy is defined else none)|tojson }}
+    }
+  ],
+  "relationship_to_household_head": [
+    {
+      "is_head": {{ yn(rel_is_head_raw) }},
+      "relationship_to_head": {{ (rel_head_raw|upper if rel_head_raw else "OTHER")|tojson }},
+      "dependency_indicator": {{ yn(rel.dependency_indicator) }},
+      "residency_status": {{ (residency_norm or none)|tojson }}
+    }
+  ],
+  "individual_vulnerability_intake": [
+    {
+      "displacement_status": {{ (displacement_norm or none)|tojson }},
+      "pastoralist_classification": {{ ((v.pastoralist_classification or "")|upper or none)|tojson }},
+      "high_mobility_indicator": {{ yn(v.high_mobility_indicator) }},
+      "plw_status": {{ yn(v.plw_status) }},
+      "plw_date": {{ (v.plw_date or none)|tojson }},
+      "orphanhood_flag": {{ yn(v.orphanhood_flag) }},
+      "chronic_illness_flag": {{ yn(v.chronic_illness_flag) }}
+    }
+  ],
+  "individual_disability": [
+    {%- for row in disability_rows %}
+    {%- set domain_raw = (row.disability_domains or row.disability_domains_other or "")|string|lower -%}
+    {%- set severity_raw = (row.disability_severity or "")|string|lower -%}
+    {
+      "disability_domains": {{ (domain_raw|upper if domain_raw else none)|tojson }},
+      "disability_severity": {{ (severity_raw|upper if severity_raw else none)|tojson }}
+    }{{ "," if not loop.last else "" }}
+    {%- endfor %}
+  ],
+  "individual_livelihood": [
+    {
+      "primary_livelihood": {{ (primary_livelihood or none)|tojson }},
+      "secondary_livelihood": {{ (secondary_livelihood or none)|tojson }},
+      "employment_status": {{ ((li.employment_status or "")|upper or none)|tojson }},
+      "educational_status": {{ (education_norm or none)|tojson }},
+      "coping_strategies_index": {{ (li.coping_strategies_index or none)|tojson }},
+      "mobile_phone_type": {{ (mobile_norm or none)|tojson }}
+    }
+  ],
+  "individual_land": [
+    {
+      "land_access": {{ yn(land.land_access or assets.land_access) }},
+      "land_size": {{ (land.land_size or land.land_size_band or assets.land_size or none)|tojson }},
+      {#- ODK select_multiple arrives as a space-separated lowercase string; schema wants a list of enum values. -#}
+      {%- set pa_raw = land.productive_assets_list or land.productive_assets -%}
+      {%- if pa_raw is string -%}
+        {%- set pa = (pa_raw|upper).split() or none -%}
+      {%- elif pa_raw -%}
+        {%- set pa = pa_raw|map("upper")|list -%}
+      {%- else -%}
+        {%- set pa = none -%}
+      {%- endif -%}
+      "productive_assets": {{ pa | tojson }}
+    }
+  ],
+  "livestock": [
+    {%- for row in livestock_rows %}
+    {%- set species_raw = (row.livestock_species_type or row.other_livestock_species or "")|string|lower -%}
+    {%- set count_raw = (row.livestock_count_band or "")|string|lower -%}
+    {
+      "livestock_species": {{ (livestock_species_map.get(species_raw, species_raw|upper if species_raw else none))|tojson }},
+      "livestock_counts": {{ (livestock_count_map.get(count_raw, count_raw|upper if count_raw else none))|tojson }}
+    }{{ "," if not loop.last else "" }}
+    {%- endfor %}
+  ],
+  "individual_programs": [
+    {%- for row in program_rows %}
+    {%- set program_name_raw = (row.program_name or row.program_name_other or "")|string|lower -%}
+    {
+      "program_id": {{ (row.household_program_id or row.program_id or none)|tojson }},
+      "program_name": {{ (program_name_raw|upper if program_name_raw else none)|tojson }},
+      "program_start_date": {{ (row.program_start_date or none)|tojson }},
+      "program_exit_date": {{ (row.program_exit_date or none)|tojson }}
+    }{{ "," if not loop.last else "" }}
+    {%- endfor %}
+  ]
+}

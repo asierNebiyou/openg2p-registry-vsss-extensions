@@ -1,0 +1,17 @@
+#!openg2p/openg2p-vsss-celery:1.0.0
+
+# Dependencies
+git://v1.1.7//https://github.com/openg2p/openg2p-fastapi-common#subdirectory=openg2p-fastapi-common
+git://v1.1.7//https://github.com/openg2p/openg2p-fastapi-common#subdirectory=openg2p-fastapi-auth
+# Consolidated registry-platform repo — core + celery now live in subdirectories.
+git://v1.0.0//https://github.com/openg2p/registry-platform#subdirectory=core/openg2p-registry-core
+
+# Celery components — both included so the image can run as worker or beat (selected at runtime)
+git://v1.0.0//https://github.com/openg2p/registry-platform#subdirectory=celery/openg2p-registry-celery-beat-producers
+git://v1.0.0//https://github.com/openg2p/registry-platform#subdirectory=celery/openg2p-registry-celery-workers
+
+# Domain specific
+git://v1.2.1//https://github.com/openg2p/iam-service#subdirectory=iam-core
+
+# VSSS extension — from this repo's checkout (1.0 branch in CI; copied into local_deps/ by parse_service.py).
+./openg2p-registry-vsss-extension

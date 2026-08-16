@@ -1,0 +1,11 @@
+{{- if .Values.celeryWorker.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "common.names.fullname" (dict "Values" .Values.celeryWorker "Chart" .Chart "Release" .Release) }}-run-celery
+  labels: {{- include "common.labels.standard" (dict "customLabels" .Values.celeryWorker.commonLabels "context" $) | nindent 4 }}
+    app.kubernetes.io/component: celery-worker
+data:
+  run_celery.py: |
+{{ .Files.Get "files/run_celery.py" | indent 4 }}
+{{- end }}

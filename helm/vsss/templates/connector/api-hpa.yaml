@@ -1,0 +1,28 @@
+{{- if and .Values.connector.enabled .Values.connector.api.enabled .Values.connector.api.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-connector-api
+  labels: {{- include "connector.labels" . | nindent 4 }}
+    app.kubernetes.io/component: connector-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}-connector-api
+  minReplicas: {{ .Values.connector.api.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.connector.api.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.connector.api.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.connector.api.autoscaling.targetMemoryUtilizationPercentage }}
+{{- end }}

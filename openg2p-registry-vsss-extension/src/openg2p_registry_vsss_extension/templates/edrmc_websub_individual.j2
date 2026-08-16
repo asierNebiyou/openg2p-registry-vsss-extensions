@@ -1,0 +1,183 @@
+{#- Dedicated EDRMC WebSub -> Individual intake-form transformation.
+
+    Expected business payload:
+      {
+        "source_system": "edrmc_websub",
+        "registration_type": "individual",
+        "source_record": { ... EDRMC/Odoo individualData ... }
+      }
+
+    Output shape: section_mnemonic -> list[records].
+-#}
+{%- set wrapper = expanded if expanded is mapping else {} -%}
+{%- set p = wrapper.source_record if wrapper.source_record is mapping else wrapper -%}
+
+{%- macro nz(v) -%}
+{%- if v is none or v is sameas false or v == "" -%}null{%- else -%}{{ v|tojson }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro rel_label(v) -%}
+{%- if v is none or v is sameas false or v == "" -%}null
+{%- elif v is sequence and not (v is string) and v|length > 1 -%}{{ v[1]|tojson }}
+{%- elif v is sequence and not (v is string) and v|length == 1 -%}{{ v[0]|tojson }}
+{%- else -%}{{ v|tojson }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- set raw_name = (p.name or "")|string -%}
+{%- set tokens = raw_name.strip().split() if raw_name else [] -%}
+{%- set first_name = p.given_name or (tokens[0] if tokens|length > 0 else none) -%}
+{%- set middle_name = p.family_name or (tokens[1] if tokens|length > 1 else none) -%}
+{%- set last_name = p.addl_name or (tokens[2] if tokens|length > 2 else none) -%}
+{%- set gender_raw = (p.gender or (p.gender_id.name if p.gender_id is mapping else "") or "")|string|lower -%}
+{%- set gender_norm = {"male": "MALE", "female": "FEMALE", "other": "OTHER", "others": "OTHER", "m": "MALE", "f": "FEMALE"}.get(gender_raw, (gender_raw|upper) if gender_raw else none) -%}
+{%- set age_value = none -%}
+{%- if p.age is integer -%}{%- set age_value = p.age -%}
+{%- elif p.age is string and p.age.isdigit() -%}{%- set age_value = p.age|int -%}
+{%- elif p.age_char is string and p.age_char.isdigit() -%}{%- set age_value = p.age_char|int -%}
+{%- endif -%}
+
+{%- set livelihood_raw = (p.source_of_income or p.type_of_livelihood or p.occupation or "")|string|lower -%}
+{%- set livelihood_map = {
+  "daily_labor": "WAGE_LABOR", "daily_labour": "WAGE_LABOR", "wage_labor": "WAGE_LABOR",
+  "agriculture": "AGRICULTURE", "livestock": "LIVESTOCK",
+  "petty_trade": "BUSINESS_TRADE", "trade": "BUSINESS_TRADE", "business": "BUSINESS_TRADE",
+  "self_employment": "SELF_EMPLOYMENT", "unemployed": "UNEMPLOYED", "no_income": "UNEMPLOYED"
+} -%}
+{%- set primary_livelihood = livelihood_map.get(livelihood_raw, "OTHER" if livelihood_raw else none) -%}
+{%- set disabled_raw = p.disability_status if p.get("disability_status") not in [none, ""] else (p.is_the_hh_head_disable if p.get("is_the_hh_head_disable") not in [none, ""] else p.get("disabled")) -%}
+{%- set disabled = (disabled_raw if disabled_raw is not none else "")|string|lower -%}
+{%- set disability_norm = {"yes": "YES", "true": "YES", "1": "YES", "no": "NO", "false": "NO", "0": "NO"}.get(disabled) -%}
+{%- set site_name_raw = p.get("site_name") -%}
+{%- set gote_raw = p.get("gote") -%}
+{%- set village_raw = p.get("village") -%}
+{%- set location_raw = p.get("location") -%}
+{%- set site_name = site_name_raw if site_name_raw not in [false, none, ""] else none -%}
+{%- set gote = gote_raw if gote_raw not in [false, none, ""] else none -%}
+{%- set village = village_raw if village_raw not in [false, none, ""] else none -%}
+{%- set location = location_raw if location_raw not in [false, none, ""] else none -%}
+{%- set region_id = (p.region[0] if p.region is sequence and p.region|length > 0 else none) -%}
+{%- set region_label = (p.region[1] if p.region is sequence and p.region|length > 1 else none) -%}
+{%- set region_code = (p.region[3] if p.region is sequence and p.region|length > 3 else none) -%}
+{%- set zone_id = (p.zone[0] if p.zone is sequence and p.zone|length > 0 else none) -%}
+{%- set zone_label = (p.zone[1] if p.zone is sequence and p.zone|length > 1 else none) -%}
+{%- set woreda_id = (p.woreda[0] if p.woreda is sequence and p.woreda|length > 0 else none) -%}
+{%- set woreda_label = (p.woreda[1] if p.woreda is sequence and p.woreda|length > 1 else none) -%}
+{%- set kebele_value = p.kebele if p.kebele not in [false, none, ""] else none -%}
+{%- set address_parts = [site_name, gote, village, location, kebele_value, woreda_label, zone_label, region_label] | reject("none") | list -%}
+{%- set address_descriptor = address_parts|join(", ") if address_parts else none -%}
+{%- set geo = namespace(hierarchy=[]) -%}
+{%- if region_label -%}
+  {%- set geo.hierarchy = geo.hierarchy + [{"level": "region", "level_value_id": region_label, "level_value_mnemonic": region_label}] -%}
+{%- endif -%}
+{%- if zone_label -%}
+  {%- set geo.hierarchy = geo.hierarchy + [{"level": "sub_city", "level_value_id": zone_label, "level_value_mnemonic": zone_label}] -%}
+{%- endif -%}
+{%- if woreda_label -%}
+  {%- set geo.hierarchy = geo.hierarchy + [{"level": "woreda", "level_value_id": woreda_label, "level_value_mnemonic": woreda_label}] -%}
+{%- endif -%}
+{%- set reg_ids = p.reg_ids if p.reg_ids is mapping else {} -%}
+{%- set rid_value = p.rid or reg_ids.RID or none -%}
+{%- set foundational_value = p.unique_id or reg_ids.UID or reg_ids.dcid_finger_print_no or reg_ids.laissez_passer or none -%}
+{%- set partner_lat = p.get("partner_latitude") -%}
+{%- set partner_lng = p.get("partner_longitude") -%}
+{%- set enum_lat = p.get("enum_latitude") -%}
+{%- set enum_lng = p.get("enum_longitude") -%}
+{%- set enum_acc = p.get("enum_accuracy") -%}
+{%- set gps_lat = partner_lat if partner_lat not in [false, none, 0, 0.0, ""] else (enum_lat if enum_lat not in [false, none, 0, 0.0, ""] else none) -%}
+{%- set gps_lng = partner_lng if partner_lng not in [false, none, 0, 0.0, ""] else (enum_lng if enum_lng not in [false, none, 0, 0.0, ""] else none) -%}
+{%- set gps_acc = enum_acc if enum_acc not in [false, none, 0, 0.0, ""] else none -%}
+
+{
+  "individual_identifier": [
+    {
+      "foundation_id": {{ (foundational_value or none)|tojson }},
+      "foundational_id": {{ (foundational_value or none)|tojson }},
+      "rid": {{ (rid_value or none)|tojson }},
+      "rid_status": {{ (rid_value and "PENDING" or none)|tojson }}
+    }
+  ],
+  "individual_demographic_details": [
+    {
+      "first_name": {{ (first_name or none)|tojson }},
+      "middle_name": {{ (middle_name or none)|tojson }},
+      "last_name": {{ (last_name or none)|tojson }},
+      "given_name": {{ (first_name or none)|tojson }},
+      "full_name": {{ (raw_name.strip() or none)|tojson }},
+      "record_name": {{ (raw_name.strip() or none)|tojson }},
+      "alias_names": {{ (p.other_name or none)|tojson }},
+      "gender": {{ (gender_norm or none)|tojson }},
+      "birth_date": {{ (p.birthdate or none)|tojson }},
+      "estimated_age": {{ (age_value or none)|tojson }},
+      "age_method": {{ ("ESTIMATED" if age_value else none)|tojson }},
+      "marital_status": null,
+      "citizenship_category": null,
+      "language_code": {{ (p.lang or none)|tojson }},
+      "education_level": {{ (p.level_of_education or none)|tojson }},
+      "occupation": {{ (p.occupation or p.other_occupation or none)|tojson }}
+    }
+  ],
+  "individual_contact_details": [
+    {
+      "primary_phone": {{ (p.phone_string or none)|tojson }},
+      "alternate_phone": null,
+      "preferred_contact_method": {{ ("CALL" if p.phone_string else none)|tojson }},
+      "contact_person_name": null
+    }
+  ],
+  "individual_location_details": [
+    {
+      "address_descriptor": {{ (address_descriptor or none)|tojson }},
+      "kebele_code": {{ (kebele_value or none)|tojson }},
+      "locality_ea_code": null,
+      "geo_lowest_level_value_id": null,
+      "geo_code_hierarchy_json": {
+        "hierarchy": {{ geo.hierarchy | tojson }},
+        "lowest_level_value_id": {{ (woreda_label or zone_label or region_label or none)|tojson }},
+        "kebele": {"id": {{ (kebele_value or none)|tojson }}, "name": {{ (kebele_value or none)|tojson }}},
+        "woreda": {"id": {{ (woreda_label or none)|tojson }}, "name": {{ (woreda_label or none)|tojson }}},
+        "sub_city": {"id": {{ (zone_label or none)|tojson }}, "name": {{ (zone_label or none)|tojson }}},
+        "zone": {"id": {{ (zone_label or none)|tojson }}, "name": {{ (zone_label or none)|tojson }}},
+        "region": {"id": {{ (region_label or none)|tojson }}, "name": {{ (region_label or none)|tojson }}, "code": {{ (region_code or none)|tojson }}}
+      },
+      "gps_latitude": {{ (gps_lat if gps_lat is not none else none)|tojson }},
+      "gps_longitude": {{ (gps_lng if gps_lng is not none else none)|tojson }},
+      "gps_accuracy": {{ (gps_acc if gps_acc is not none else none)|tojson }}
+    }
+  ],
+  "relationship_to_household_head": [
+    {
+      "relationship_to_head": "OTHER",
+      "dependency_indicator": null,
+      "residency_status": "TEMPORARY"
+    }
+  ],
+  "individual_vulnerability": [
+    {
+      "disability_status": {{ (disability_norm or none)|tojson }},
+      "displacement_status": null,
+      "pastoralist_classification": null,
+      "high_mobility_indicator": null,
+      "plw_status": null,
+      "plw_date": null,
+      "orphanhood_flag": null,
+      "chronic_illness_flag": null
+    }
+  ],
+  "individual_livelihood": [
+    {
+      "primary_livelihood": {{ (primary_livelihood or none)|tojson }},
+      "secondary_livelihood": null,
+      "employment_status": null,
+      "coping_strategies_index": null,
+      "mobile_phone_type": null
+    }
+  ],
+  "individual_land": [
+    {
+      "land_access": {{ ("true" if (p.get("access_land_for_cultivation")|string)|lower == "yes" else "false" if (p.get("access_land_for_cultivation")|string)|lower == "no" else "null") }},
+      "land_size": {{ (p.get("size_of_owned_farmland") if p.get("size_of_owned_farmland") not in [false, none, ""] else none)|tojson }},
+      "productive_assets": null
+    }
+  ]
+}

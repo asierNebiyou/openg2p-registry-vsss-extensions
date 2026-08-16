@@ -1,0 +1,4 @@
+#!openg2p/openg2p-vsss-staff-portal-ui:1.1.1
+
+# UI sources — registry-platform branch `1.1` (cloned in Dockerfile).
+git://1.1.1//https://github.com/OpenG2P/registry-platform

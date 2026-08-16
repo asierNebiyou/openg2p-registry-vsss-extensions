@@ -1,0 +1,218 @@
+{#- Dedicated EDRMC WebSub -> Household intake-form transformation.
+
+    Expected business payload:
+      {
+        "source_system": "edrmc_websub",
+        "registration_type": "household",
+        "source_record": { ... EDRMC/Odoo groupData ... }
+      }
+
+    The output shape must be section_mnemonic -> list[records].
+-#}
+{%- set wrapper = expanded if expanded is mapping else {} -%}
+{%- set hh = wrapper.source_record if wrapper.source_record is mapping else wrapper -%}
+{%- set memberships = hh.group_membership_ids or [] -%}
+{%- if memberships is string or memberships is not sequence -%}{%- set memberships = [] -%}{%- endif -%}
+
+{%- macro nz(v) -%}
+{%- if v is none or v is sameas false or v == "" -%}null{%- else -%}{{ v|tojson }}{%- endif -%}
+{%- endmacro -%}
+
+{%- macro rel_label(v) -%}
+{%- if v is none or v is sameas false or v == "" -%}null
+{%- elif v is sequence and not (v is string) and v|length > 1 -%}{{ v[1]|tojson }}
+{%- elif v is sequence and not (v is string) and v|length == 1 -%}{{ v[0]|tojson }}
+{%- else -%}{{ v|tojson }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro rel_code(v) -%}
+{%- if v is none or v is sameas false or v == "" -%}null
+{%- elif v is sequence and not (v is string) and v|length > 2 -%}{{ v[2]|tojson }}
+{%- elif v is sequence and not (v is string) and v|length > 1 -%}{{ v[1]|tojson }}
+{%- elif v is sequence and not (v is string) and v|length == 1 -%}{{ v[0]|tojson }}
+{%- else -%}{{ v|tojson }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro boolish(v) -%}
+{%- if v is sameas true -%}true
+{%- elif v is sameas false or v is none -%}false
+{%- elif (v|string)|lower in ["yes", "true", "1", "y"] -%}true
+{%- else -%}false
+{%- endif -%}
+{%- endmacro -%}
+
+{%- set is_female_head = (hh.is_female_a_hh_head|string)|lower == "yes" -%}
+{%- set is_child_head = (hh.is_child_a_hh_head|string)|lower == "yes" -%}
+{%- set is_elderly_head = (hh.is_hh_head_above_60|string)|lower == "yes" -%}
+{%- set is_disabled_head = (hh.is_the_hh_head_disable|string)|lower == "yes" -%}
+{%- if is_female_head -%}{%- set headship_type = "FEMALE_HEADED" -%}
+{%- elif is_child_head -%}{%- set headship_type = "CHILD_HEADED" -%}
+{%- elif is_elderly_head -%}{%- set headship_type = "ELDERLY_HEADED" -%}
+{%- elif is_disabled_head -%}{%- set headship_type = "DISABLED_HEADED" -%}
+{%- else -%}{%- set headship_type = "MALE_HEADED" -%}
+{%- endif -%}
+
+{%- set hh_size_raw = hh.household_size -%}
+{%- set hh_size = none -%}
+{%- if hh_size_raw is integer -%}{%- set hh_size = hh_size_raw -%}
+{%- elif hh_size_raw is string and hh_size_raw.isdigit() -%}{%- set hh_size = hh_size_raw|int -%}
+{%- elif memberships -%}{%- set hh_size = memberships|length -%}
+{%- endif -%}
+
+{%- set adults = none -%}
+{%- set children = none -%}
+{%- set elderly = none -%}
+{%- if hh_size is not none and hh.no_of_younger_children is integer -%}{%- set children = hh.no_of_younger_children -%}{%- endif -%}
+{%- if hh.no_of_chronically_ill_individuals is integer -%}{%- set chronic_count = hh.no_of_chronically_ill_individuals -%}{%- else -%}{%- set chronic_count = none -%}{%- endif -%}
+{%- if hh_size is not none and children is not none -%}{%- set adults = hh_size - children -%}{%- endif -%}
+{%- if is_elderly_head -%}{%- set elderly = 1 -%}{%- endif -%}
+
+{%- set gote_raw = hh.get("gote") -%}
+{%- set village_raw = hh.get("village") -%}
+{%- set location_raw = hh.get("location") -%}
+{%- set site_raw = hh.get("site_name") -%}
+{%- set gote = gote_raw if gote_raw not in [false, none, ""] else none -%}
+{%- set village = village_raw if village_raw not in [false, none, ""] else none -%}
+{%- set location = location_raw if location_raw not in [false, none, ""] else none -%}
+{%- set site = site_raw if site_raw not in [false, none, ""] else none -%}
+{%- set region_id = (hh.region[0] if hh.region is sequence and hh.region|length > 0 else none) -%}
+{%- set region_label = (hh.region[1] if hh.region is sequence and hh.region|length > 1 else none) -%}
+{%- set region_code = (hh.region[3] if hh.region is sequence and hh.region|length > 3 else none) -%}
+{%- set zone_id = (hh.zone[0] if hh.zone is sequence and hh.zone|length > 0 else none) -%}
+{%- set zone_label = (hh.zone[1] if hh.zone is sequence and hh.zone|length > 1 else none) -%}
+{%- set woreda_id = (hh.woreda[0] if hh.woreda is sequence and hh.woreda|length > 0 else none) -%}
+{%- set woreda_label = (hh.woreda[1] if hh.woreda is sequence and hh.woreda|length > 1 else none) -%}
+{%- set kebele_value = hh.kebele if hh.kebele not in [false, none, ""] else none -%}
+{%- set address_parts = [site, gote, village, location, kebele_value, woreda_label, zone_label, region_label] | reject("none") | list -%}
+{%- set address_descriptor = address_parts|join(", ") if address_parts else none -%}
+{%- set geo = namespace(hierarchy=[]) -%}
+{%- if region_label -%}
+  {%- set geo.hierarchy = geo.hierarchy + [{"level": "region", "level_value_id": region_label, "level_value_mnemonic": region_label}] -%}
+{%- endif -%}
+{%- if zone_label -%}
+  {%- set geo.hierarchy = geo.hierarchy + [{"level": "sub_city", "level_value_id": zone_label, "level_value_mnemonic": zone_label}] -%}
+{%- endif -%}
+{%- if woreda_label -%}
+  {%- set geo.hierarchy = geo.hierarchy + [{"level": "woreda", "level_value_id": woreda_label, "level_value_mnemonic": woreda_label}] -%}
+{%- endif -%}
+
+{%- set partner_lat = hh.get("partner_latitude") -%}
+{%- set partner_lng = hh.get("partner_longitude") -%}
+{%- set enum_lat = hh.get("enum_latitude") -%}
+{%- set enum_lng = hh.get("enum_longitude") -%}
+{%- set enum_acc = hh.get("enum_accuracy") -%}
+{%- set lat = partner_lat if partner_lat not in [false, none, 0, 0.0, ""] else (enum_lat if enum_lat not in [false, none, 0, 0.0, ""] else none) -%}
+{%- set lng = partner_lng if partner_lng not in [false, none, 0, 0.0, ""] else (enum_lng if enum_lng not in [false, none, 0, 0.0, ""] else none) -%}
+{%- set gps_acc = enum_acc if enum_acc not in [false, none, 0, 0.0, ""] else none -%}
+
+{%- set floor_map = {"cement": "CEMENT", "soil": "EARTH", "earth": "EARTH", "wood": "WOOD", "tile": "TILE"} -%}
+{%- set floor_raw = (hh.condition_of_constructed_house or "")|string|lower -%}
+{%- set floor_norm = floor_map.get(floor_raw, (floor_raw|upper) if floor_raw else none) -%}
+{%- set shelter_raw = (hh.type_of_shelter or "")|string -%}
+{%- set water_source = "PIPED" if (hh.enough_drinking_water|string)|lower == "yes" else none -%}
+
+{%- set psnp_raw = (hh.types_of_psnp or "")|string|lower -%}
+{%- if (hh.is_hh_enrolled_under_psnp_program|string)|lower == "yes" -%}
+{%- set program_name = "UPSNP" if psnp_raw in ["upsnp", "pds"] else "RPSNP" -%}
+{%- else -%}{%- set program_name = none -%}{%- endif -%}
+
+{
+  "household_roster": [
+    {
+      "household_size_total": {{ (hh_size if hh_size is not none else none)|tojson }},
+      "household_size_adults": {{ (adults if adults is not none and adults >= 0 else none)|tojson }},
+      "household_size_children_u5": {{ (children if children is not none else none)|tojson }},
+      "household_size_school_age": null,
+      "household_size_elderly": {{ (elderly if elderly is not none else none)|tojson }},
+      "headship_type": {{ headship_type|tojson }},
+      "elderly_member_present": {{ boolish(is_elderly_head) }}
+    }
+  ],
+  "household_location_details": [
+    {
+      "kebele_code": {{ nz(kebele_value) }},
+      "locality_ea_code": null,
+      "address_descriptor": {{ (address_descriptor or none)|tojson }},
+      "geo_lowest_level_value_id": null,
+      "geo_code_hierarchy_json": {
+        "hierarchy": {{ geo.hierarchy | tojson }},
+        "lowest_level_value_id": {{ (woreda_label or zone_label or region_label or none)|tojson }},
+        "kebele": {"id": {{ (kebele_value or none)|tojson }}, "name": {{ (kebele_value or none)|tojson }}},
+        "woreda": {"id": {{ (woreda_label or none)|tojson }}, "name": {{ (woreda_label or none)|tojson }}},
+        "sub_city": {"id": {{ (zone_label or none)|tojson }}, "name": {{ (zone_label or none)|tojson }}},
+        "zone": {"id": {{ (zone_label or none)|tojson }}, "name": {{ (zone_label or none)|tojson }}},
+        "region": {"id": {{ (region_label or none)|tojson }}, "name": {{ (region_label or none)|tojson }}, "code": {{ (region_code or none)|tojson }}}
+      },
+      "gps_latitude": {{ (lat if lat is not none else none)|tojson }},
+      "gps_longitude": {{ (lng if lng is not none else none)|tojson }},
+      "gps_accuracy": {{ (gps_acc if gps_acc is not none else none)|tojson }}
+    }
+  ],
+  "housing_and_services": [
+    {
+      "dwelling_type": {{ ((shelter_raw|upper) if shelter_raw else none)|tojson }},
+      "roof_material": null,
+      "wall_material": null,
+      "floor_material": {{ (floor_norm or none)|tojson }},
+      "tenure_status": null,
+      "water_source_type": {{ (water_source or none)|tojson }},
+      "water_distance_minutes": null,
+      "sanitation_type": null,
+      "lighting_source": null,
+      "cooking_fuel_type": null,
+      "rooms_count": {{ (hh.get("number_of_rented_rooms") if hh.get("number_of_rented_rooms") not in [false, none, ""] else none)|tojson }}
+    }
+  ],
+  "household_program": [
+    {%- if program_name %}
+    {
+      "program_name": {{ program_name|tojson }},
+      "program_start_date": null,
+      "program_exit_date": null
+    }
+    {%- endif %}
+  ],
+  "household_legacy_programs": [
+    {%- if hh.get("eid") not in [false, none, "", "New"] %}
+    {
+      "legacy_program_id": {{ hh.get("eid")|tojson }},
+      "legacy_program_name": "EDRMC"
+    }
+    {%- endif %}
+  ],
+  "household_members": [
+    {%- if memberships %}
+    {%- for m in memberships %}
+    {%- set ind = (m.individual if m is mapping and m.individual is mapping else {}) -%}
+    {%- set reg_ids = ind.reg_ids if ind.reg_ids is mapping else {} -%}
+    {%- set gender_raw = (ind.gender or m.individual_gender or "")|string|lower -%}
+    {%- set gender_norm = {"male": "MALE", "female": "FEMALE", "other": "OTHER", "others": "OTHER", "m": "MALE", "f": "FEMALE"}.get(gender_raw, (gender_raw|upper) if gender_raw else none) -%}
+    {
+      "foundational_id": {{ (reg_ids.UID or ind.unique_id or none)|tojson }},
+      "rid": {{ (reg_ids.RID or ind.rid or none)|tojson }},
+      "first_name": {{ (ind.given_name or ind.first_name or none)|tojson }},
+      "middle_name": {{ (ind.addl_name or ind.middle_name or none)|tojson }},
+      "last_name": {{ (ind.family_name or ind.last_name or none)|tojson }},
+      "given_name": {{ (ind.given_name or ind.first_name or none)|tojson }},
+      "birth_date": {{ (ind.birthdate or m.individual_birthdate or none)|tojson }},
+      "gender": {{ (gender_norm or none)|tojson }},
+      "is_disabled": {{ boolish(ind.disability_status == "yes") }}
+    }{{ "," if not loop.last else "" }}
+    {%- endfor %}
+    {%- else %}
+    {
+      "foundational_id": null,
+      "rid": null,
+      "first_name": {{ (hh.name or none)|tojson }},
+      "middle_name": null,
+      "last_name": null,
+      "given_name": {{ (hh.name or none)|tojson }},
+      "birth_date": null,
+      "gender": null,
+      "is_disabled": null
+    }
+    {%- endif %}
+  ]
+}

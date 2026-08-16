@@ -1,0 +1,57 @@
+apiVersion: v2
+name: vsss
+description: |
+  OpenG2P Village Social Security System (VSSS) — a self-sufficient Helm chart for the
+  VSSS registry stack (staff portal API/UI, partner API, celery beat/worker,
+  db-seed, id-generator). Supplies VSSS-branded Docker images and VSSS-specific
+  ID-generator configuration.
+type: application
+
+version: 0.0.0-develop
+appVersion: "0.0.0-develop"
+
+keywords:
+  - openg2p
+  - social-registry
+  - vsss
+  - registry
+
+home: https://openg2p.org
+icon: https://openg2p.github.io/openg2p-helm/openg2p-logo.png
+sources:
+  - https://github.com/OpenG2P/openg2p-registry-vsss-extensions
+maintainers:
+  - name: OpenG2P
+    email: info@openg2p.org
+
+dependencies:
+  - name: common
+    repository: https://openg2p.github.io/openg2p-helm
+    version: 2.30.0
+  - name: postgres-init
+    version: 1.2.0
+    repository: https://openg2p.github.io/openg2p-helm
+    condition: postgres-init.enabled
+  - name: redis
+    version: 19.6.4
+    repository: https://openg2p.github.io/openg2p-helm
+    condition: redis.enabled
+  - name: openg2p-id-generator
+    alias: idgenerator
+    version: 1.0.0
+    repository: https://openg2p.github.io/openg2p-helm
+    condition: idgenerator.enabled
+  - name: keycloak-init
+    version: 1.1.1
+    repository: https://openg2p.github.io/openg2p-helm
+    condition: keycloak-init.enabled
+  - name: openg2p-awe
+    version: 1.1.0-develop
+    repository: https://openg2p.github.io/openg2p-helm
+    condition: openg2p-awe.enabled
+
+annotations:
+  catalog.cattle.io/display-name: "OpenG2P VSSS"
+  catalog.cattle.io/certified: partner
+  catalog.cattle.io/kube-version: ">=1.23.0-0"
+  openg2p.org/add-to-rancher: ""

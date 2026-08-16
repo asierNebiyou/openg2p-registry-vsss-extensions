@@ -1,0 +1,41 @@
+{{- if and .Values.connector.enabled .Values.connector.istio.enabled .Values.connector.istio.virtualservice.enabled }}
+{{- $host := tpl .Values.global.connectorHostname $ }}
+{{- $extraHosts := default (list) .Values.connector.istio.virtualservice.extraHosts }}
+# Routes the connector hostname: API prefixes go to connector-api, everything
+# else (the SPA assets) to connector-ui. /webhook must stay on this list —
+# WebSub hubs call back on it.
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ .Release.Name }}-connector
+  labels: {{- include "connector.labels" . | nindent 4 }}
+spec:
+  hosts:
+    - {{ $host | quote }}
+    {{- range $extraHosts }}
+    - {{ tpl . $ | quote }}
+    {{- end }}
+  gateways:
+    - {{ .Values.connector.istio.virtualservice.gateway | quote }}
+  http:
+    {{- range .Values.connector.istio.virtualservice.apiPrefixes }}
+    - match:
+        - uri:
+            prefix: {{ . | quote }}
+      route:
+        - destination:
+            host: {{ $.Release.Name }}-connector-api
+            port:
+              number: {{ $.Values.connector.api.service.port }}
+    {{- end }}
+    {{- if .Values.connector.ui.enabled }}
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: {{ .Release.Name }}-connector-ui
+            port:
+              number: {{ .Values.connector.ui.service.port }}
+    {{- end }}
+{{- end }}

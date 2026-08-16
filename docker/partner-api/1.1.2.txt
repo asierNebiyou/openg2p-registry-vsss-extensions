@@ -1,0 +1,16 @@
+#!openg2p/openg2p-vsss-partner-api:1.1.2
+
+# Dependencies libs
+git://v1.1.7//https://github.com/openg2p/openg2p-fastapi-common#subdirectory=openg2p-fastapi-common
+git://v1.1.7//https://github.com/openg2p/openg2p-fastapi-common#subdirectory=openg2p-fastapi-auth
+
+# Core
+git://v1.3.0//https://github.com/openg2p/iam-service#subdirectory=iam-core
+# Consolidated registry-platform repo — core now lives in a subdirectory.
+git://1.1.2//https://github.com/openg2p/registry-platform#subdirectory=core/openg2p-registry-core
+
+# VSSS extension — from this repo's checkout (1.0 branch in CI; copied into local_deps/ by parse_service.py).
+./openg2p-registry-vsss-extension
+
+# Partner API
+git://1.1.2//https://github.com/openg2p/registry-platform#subdirectory=apis/openg2p-registry-partner-api

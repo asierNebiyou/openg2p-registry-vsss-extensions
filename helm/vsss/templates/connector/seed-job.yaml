@@ -1,0 +1,52 @@
+{{- if and .Values.connector.enabled .Values.connector.seed.enabled }}
+# Seeds connector definitions through the connector API after install/upgrade.
+# Idempotent: connectors are matched by name (POST if new, PATCH if present).
+# Credentials (webhook client secrets, ODK logins) come from the Secret named
+# by connector.seed.existingSecret; connectors whose placeholders cannot be
+# resolved are skipped with a warning, so the chart installs cleanly before
+# that Secret exists — re-run `helm upgrade` after creating it.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-connector-seed
+  labels: {{- include "connector.labels" . | nindent 4 }}
+    app.kubernetes.io/component: connector-seed
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "15"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: {{ .Values.connector.seed.backoffLimit | default 3 }}
+  template:
+    metadata:
+      labels: {{- include "connector.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: connector-seed
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: connector-seed
+          image: "{{ .Values.connector.seed.image.repository }}:{{ .Values.connector.seed.image.tag }}"
+          imagePullPolicy: {{ .Values.connector.seed.image.pullPolicy }}
+          command: ["python3", "/seed/seed_connectors.py"]
+          env:
+            - name: CONNECTOR_API_BASE_URL
+              value: {{ printf "http://%s-connector-api:%v" .Release.Name .Values.connector.api.service.port | quote }}
+            - name: SYNC_WEBSUB_SUBSCRIPTIONS
+              value: {{ .Values.connector.seed.syncWebsubSubscriptions | quote }}
+          {{- if .Values.connector.seed.existingSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ tpl .Values.connector.seed.existingSecret $ | quote }}
+                optional: true
+          {{- end }}
+          volumeMounts:
+            - name: seed
+              mountPath: /seed
+          {{- if .Values.connector.seed.resources }}
+          resources: {{- toYaml .Values.connector.seed.resources | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: seed
+          configMap:
+            name: {{ .Release.Name }}-connector-seed
+{{- end }}

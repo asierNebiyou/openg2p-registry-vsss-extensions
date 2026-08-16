@@ -1,0 +1,269 @@
+{#- =====================================================================
+    UD Social Registry WebSub → Individual register transformation.
+
+    `expanded` is the business payload extracted at
+    `$.body.message.payload` (key_path_for_business_payload of the
+    ud_websub_individual_v1 data model). It carries the projected
+    Odoo res.partner record produced by the connector's JMESPath
+    mapper for the UD WebSub flow.
+
+    Output: a `{section_mnemonic: {...fields}}` dictionary that the
+    registry transformation worker validates against
+    g2p_register_sections for the Individual register
+    (a1a4d25a-1cd4-4356-abac-985a0b3c6bcd). Every leaf field name
+    matches a `widget-id` (or the underlying register column).
+   ===================================================================== -#}
+{%- set p = expanded if expanded is mapping else {} -%}
+
+{#- ----------- Helpers ------------------------------------------------- -#}
+{%- macro is_blank(v) -%}
+{%- if v is none or v is sameas false or v == "" -%}true{%- else -%}false{%- endif -%}
+{%- endmacro -%}
+
+{%- macro odoo_label(v) -%}
+{#- Odoo many2one: [id, label] tuple or {id,name,code} dict. -#}
+{%- if v is none or v is sameas false or v == "" -%}null
+{%- elif v is mapping -%}{{ (v.name or v.code or v.id)|tojson }}
+{%- elif v is sequence and not (v is string) and v|length > 1 -%}{{ v[1]|tojson }}
+{%- elif v is sequence and not (v is string) and v|length == 1 -%}{{ v[0]|tojson }}
+{%- else -%}{{ v|tojson }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro odoo_id(v) -%}
+{#- Odoo many2one → id only. -#}
+{%- if v is none or v is sameas false or v == "" -%}null
+{%- elif v is mapping -%}{{ v.id|tojson }}
+{%- elif v is sequence and not (v is string) and v|length > 0 -%}{{ v[0]|tojson }}
+{%- else -%}{{ v|tojson }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro yn(v) -%}
+{%- if v is none or v is sameas false -%}null
+{%- elif (v|string)|lower in ["yes", "true", "1", "y"] -%}true
+{%- elif (v|string)|lower in ["no", "false", "0", "n"] -%}false
+{%- else -%}null
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro upper_or_null(v) -%}
+{%- if v is none or v is sameas false or v == "" -%}null
+{%- else -%}{{ (v|string)|upper|tojson }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro nz(v) -%}
+{#- Render value or null without uppercasing. -#}
+{%- if v is none or v is sameas false or v == "" -%}null
+{%- else -%}{{ v|tojson }}
+{%- endif -%}
+{%- endmacro -%}
+
+{#- ----------- Name normalization ------------------------------------- -#}
+{%- set raw_name = (p.name or p.complete_name or "") -%}
+{%- if raw_name is string -%}{%- set name_tokens = raw_name.strip().split() -%}{%- else -%}{%- set name_tokens = [] -%}{%- endif -%}
+{%- set first_name = (p.given_name or (name_tokens[0] if name_tokens|length > 0 else none)) -%}
+{%- set middle_name = (p.family_name or (name_tokens[1] if name_tokens|length > 1 else none)) -%}
+{%- set last_name = (p.addl_name or (name_tokens[2] if name_tokens|length > 2 else none)) -%}
+{%- if last_name is string and (last_name|string)|lower == (middle_name|string)|lower -%}{%- set last_name = none -%}{%- endif -%}
+{%- set alias_name = p.name_am or p.complete_name or none -%}
+{%- if alias_name is string and (alias_name|string).strip() == (raw_name|string).strip() -%}{%- set alias_name = none -%}{%- endif -%}
+
+{#- ----------- Gender ------------------------------------------------- -#}
+{%- set gender_raw = (p.gender or "")|string|lower -%}
+{%- set gender_map = {"male": "MALE", "female": "FEMALE", "other": "OTHER", "others": "OTHER", "m": "MALE", "f": "FEMALE"} -%}
+{%- set gender_norm = gender_map.get(gender_raw) -%}
+
+{#- ----------- Marital status (registry MaritalStatusEnum) ------------ -#}
+{#- The enricher already remaps common values, but normalize here too. -#}
+{%- set marital_raw = (p.marital_status or "")|string|lower -%}
+{%- set marital_map = {
+    "single": "SINGLE", "unmarried": "SINGLE", "never_married": "SINGLE",
+    "married": "MARRIED",
+    "divorced": "DIVORCED",
+    "widowed": "WIDOWED", "widow": "WIDOWED",
+    "separated": "SEPARATED",
+} -%}
+{%- set marital_norm = marital_map.get(marital_raw) -%}
+
+{#- ----------- Disability ---------------------------------------------- -#}
+{%- set disab_raw = (p.disability_status or "")|string|lower -%}
+{%- set disability_norm = ({"yes": "YES", "no": "NO", "true": "YES", "false": "NO"}).get(disab_raw) -%}
+
+{#- ----------- Livelihood (Odoo source_income → enum-ish) ------------- -#}
+{%- set income_raw = (p.current_source_income or "")|string|lower -%}
+{%- set livelihood_map = {
+    "daily_labor": "WAGE_LABOR", "daily_labour": "WAGE_LABOR",
+    "petty_trade": "BUSINESS_TRADE",
+    "employment": "PRIVATE_SECTOR_EMPLOYEE", "salaried": "PRIVATE_SECTOR_EMPLOYEE",
+    "no_income": "UNEMPLOYED", "none": "UNEMPLOYED", "begging": "OTHER", "other": "OTHER", "others": "OTHER",
+} -%}
+{%- set primary_livelihood = livelihood_map.get(income_raw, (income_raw|upper) if income_raw else none) -%}
+
+{#- ----------- Residency (homeless flag → status) --------------------- -#}
+{%- set spend_night = (p.spend_night or "")|string|lower -%}
+{%- set residency_norm = ({"temporary_shelter": "TEMPORARY", "homeless": "TEMPORARY", "permanent": "USUAL_MEMBER"}).get(spend_night) -%}
+
+{#- ----------- Education (Odoo education → registry enum-ish) --------- -#}
+{%- set education_raw = (p.education or "")|string|lower -%}
+{%- set education_map = {
+    "none": "NONE", "no_education": "NONE", "illiterate": "NONE",
+    "elementary": "PRIMARY", "primary": "PRIMARY",
+    "secondary": "SECONDARY", "high_school": "SECONDARY",
+    "tvet": "TVET", "vocational": "TVET",
+    "diploma": "DIPLOMA", "degree": "DEGREE", "masters": "MASTERS", "phd": "PHD",
+} -%}
+{%- set education_norm = education_map.get(education_raw, (education_raw|upper) if education_raw else none) -%}
+
+{#- ----------- Contact phones ----------------------------------------- -#}
+{%- set primary_phone = p.phone or p.mobile or none -%}
+{%- set alternate_phone = none -%}
+{%- if p.phone_number_ids is sequence and p.phone_number_ids and p.phone_number_ids[0] is mapping -%}
+  {%- for ph in p.phone_number_ids -%}
+    {%- set ph_no = ph.phone_no or none -%}
+    {%- set ph_type = (ph.phone_type or "")|string|lower -%}
+    {%- if ph_type == "primary" and ph_no -%}{%- set primary_phone = ph_no -%}
+    {%- elif ph_type == "secondary" and ph_no -%}{%- set alternate_phone = ph_no -%}
+    {%- elif not primary_phone and ph_no -%}{%- set primary_phone = ph_no -%}
+    {%- elif not alternate_phone and ph_no -%}{%- set alternate_phone = ph_no -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
+
+{#- ----------- Address descriptor ------------------------------------- -#}
+{%- macro odoo_label_raw(v) -%}
+{%- if v is none or v is sameas false or v == "" -%}
+{%- elif v is mapping -%}{{ v.name or v.code or v.id }}
+{%- elif v is sequence and not (v is string) and v|length > 1 -%}{{ v[1] }}
+{%- elif v is sequence and not (v is string) and v|length == 1 -%}{{ v[0] }}
+{%- else -%}{{ v }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- set hotspot_label = odoo_label_raw(p.hotspot) or none -%}
+{%- set woreda_label = odoo_label_raw(p.woreda) or none -%}
+{%- set zone_label = odoo_label_raw(p.zone) or none -%}
+{%- set region_label = odoo_label_raw(p.region) or none -%}
+{%- set address_parts = [hotspot_label, woreda_label, zone_label, region_label] | reject("none") | list -%}
+{%- set address_descriptor = (address_parts|join(", ")) if address_parts else none -%}
+{%- set geo = namespace(hierarchy=[]) -%}
+{%- if region_label -%}
+  {%- set geo.hierarchy = geo.hierarchy + [{"level": "region", "level_value_id": region_label, "level_value_mnemonic": region_label}] -%}
+{%- endif -%}
+{%- if zone_label -%}
+  {%- set geo.hierarchy = geo.hierarchy + [{"level": "sub_city", "level_value_id": zone_label, "level_value_mnemonic": zone_label}] -%}
+{%- endif -%}
+{%- if woreda_label -%}
+  {%- set geo.hierarchy = geo.hierarchy + [{"level": "woreda", "level_value_id": woreda_label, "level_value_mnemonic": woreda_label}] -%}
+{%- endif -%}
+
+{#- ----------- Birth date / age --------------------------------------- -#}
+{%- set birth_date = (p.birthdate or none) -%}
+{%- set age_value = none -%}
+{%- if p.age is integer -%}{%- set age_value = p.age -%}
+{%- elif p.age is string and p.age.isdigit() -%}{%- set age_value = p.age|int -%}
+{%- endif -%}
+
+{#- ----------- Identifiers -------------------------------------------- -#}
+{%- set foundational_id = p.unique_id or none -%}
+{%- set rid_value = p.rid or none -%}
+
+{#- =====================================================================
+    Output: section_mnemonic-keyed dict (validator requires this shape)
+   ===================================================================== -#}
+{#- NOTE: header_info is not part of the Individual intake form, so
+    source-system traceability metadata is dropped from the transformed
+    output. record_status is set by the enricher / ingest worker. -#}
+{
+  "individual_identifier": [
+    {
+    "foundation_id": {{ nz(foundational_id) }},
+    "foundational_id": {{ nz(foundational_id) }},
+    "rid": {{ nz(rid_value) }},
+    "rid_status": {{ (rid_value and "PENDING" or none)|tojson }}
+    }
+  ],
+  "individual_demographic_details": [
+    {
+    "first_name": {{ (first_name or none)|tojson }},
+    "middle_name": {{ (middle_name or none)|tojson }},
+    "last_name": {{ (last_name or none)|tojson }},
+    "given_name": {{ (first_name or none)|tojson }},
+    "full_name": {{ (raw_name|trim or none)|tojson }},
+    "record_name": {{ (raw_name|trim or none)|tojson }},
+    "alias_names": {{ (alias_name or none)|tojson }},
+    "gender": {{ (gender_norm or none)|tojson }},
+    "birth_date": {{ (birth_date or none)|tojson }},
+    "estimated_age": {{ (age_value or none)|tojson }},
+    "age_method": {{ ("ESTIMATED" if age_value else none)|tojson }},
+    "marital_status": {{ (marital_norm or none)|tojson }},
+    "citizenship_category": null,
+    "language_code": {{ (p.lang or none)|tojson }},
+    "education_level": {{ (education_norm or none)|tojson }}
+    }
+  ],
+  "individual_contact_details": [
+    {
+    "primary_phone": {{ (primary_phone or none)|tojson }},
+    "alternate_phone": {{ (alternate_phone or none)|tojson }},
+    "preferred_contact_method": {{ ("CALL" if primary_phone else none)|tojson }},
+    "contact_person_name": {{ (p.name_consent or none)|tojson }}
+    }
+  ],
+  "individual_location_details": [
+    {
+    "address_descriptor": {{ (address_descriptor or none)|tojson }},
+    "kebele_code": {{ (hotspot_label or none)|tojson }},
+    "locality_ea_code": null,
+    "geo_lowest_level_value_id": null,
+    "geo_code_hierarchy_json": {
+      "hierarchy": {{ geo.hierarchy | tojson }},
+      "lowest_level_value_id": {{ (woreda_label or zone_label or region_label or none)|tojson }},
+      "kebele": {"id": {{ (hotspot_label or none)|tojson }}, "name": {{ (hotspot_label or none)|tojson }}},
+      "woreda": {"id": {{ (woreda_label or none)|tojson }}, "name": {{ (woreda_label or none)|tojson }}},
+      "sub_city": {"id": {{ (zone_label or none)|tojson }}, "name": {{ (zone_label or none)|tojson }}},
+      "zone": {"id": {{ (zone_label or none)|tojson }}, "name": {{ (zone_label or none)|tojson }}},
+      "region": {"id": {{ (region_label or none)|tojson }}, "name": {{ (region_label or none)|tojson }}}
+    },
+    "gps_latitude": null,
+    "gps_longitude": null,
+    "gps_accuracy": null
+    }
+  ],
+  "relationship_to_household_head": [
+    {
+    "relationship_to_head": "OTHER",
+    "dependency_indicator": null,
+    "residency_status": {{ (residency_norm or none)|tojson }}
+    }
+  ],
+  "individual_vulnerability_intake": [
+    {
+    "disability_status": {{ (disability_norm or none)|tojson }},
+    "displacement_status": null,
+    "pastoralist_classification": null,
+    "high_mobility_indicator": null,
+    "plw_status": null,
+    "plw_date": null,
+    "orphanhood_flag": null,
+    "chronic_illness_flag": null
+    }
+  ],
+  "individual_livelihood": [
+    {
+    "primary_livelihood": {{ (primary_livelihood or none)|tojson }},
+    "secondary_livelihood": null,
+    "employment_status": null,
+    "coping_strategies_index": null,
+    "mobile_phone_type": null
+    }
+  ],
+  "individual_land": [
+    {
+    "land_access": null,
+    "land_size": null,
+    "productive_assets": null
+    }
+  ]
+}

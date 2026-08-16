@@ -1,0 +1,275 @@
+{% set d = expanded if expanded is defined else {} %}
+{% set payload = d.get("body") or {} %}
+{% set payload = payload.get("message") or {} %}
+{% set payload = payload.get("payload") or d %}
+{% set registry_keys = payload.get("registry_keys") or {} %}
+{% set roster = payload.get("household_roster") or {} %}
+{% set household_location = payload.get("household_location_details") or {} %}
+{% set household_gps = household_location.get("household_gps_location") or {} %}
+{% set household_coordinates = household_gps.get("coordinates") or [] %}
+{% set household_gps_properties = household_gps.get("properties") or {} %}
+{% set dwelling = payload.get("household_dwelling") or {} %}
+{% set household_members_group = payload.get("household_memebers") or payload.get("household_members") or {} %}
+{% set household_members = household_members_group.get("memebers") or household_members_group.get("members") or [] %}
+{% set relationship = payload.get("household_relationship") or {} %}
+{% set location = payload.get("location_details") or {} %}
+{% set gps = location.get("gps_location") or {} %}
+{% set coordinates = gps.get("coordinates") or [] %}
+{% set gps_properties = gps.get("properties") or {} %}
+{% set contact = payload.get("contact_details") or {} %}
+{% set demographics = payload.get("individual_demographics") or {} %}
+{% set household_programs = payload.get("household_programs") or {} %}
+{% set household_program_rows = household_programs.get("program_participation_detail") or [] %}
+{% set shock_group = payload.get("shock_details_group") or {} %}
+{% set shock_rows = shock_group.get("shock_details") or [] %}
+{%- set prefix_map = {"mr": "Mr", "mrs": "Mrs", "miss": "Miss"} -%}
+{%- set gender_map = {"male": "MALE", "female": "FEMALE", "other": "OTHERS", "others": "OTHERS"} -%}
+{#- ODK sends region/zone/woreda mnemonics; geo widget needs master-data level_value_id. -#}
+{%- set region_id_map = {
+  "addis_ababa": "ET-AA", "afar": "ET-AF", "amhara": "ET-AM", "benishangul_gumuz": "ET-BE",
+  "central_ethiopia": "ET-CE", "dire_dawa": "ET-DD", "gambela": "ET-GA", "harari": "ET-HA",
+  "oromia": "ET-OR", "sidama": "ET-SI", "somali": "ET-SO", "south_ethiopia": "ET-SN",
+  "southwest_ethiopia": "ET-SW", "tigray": "ET-TI",
+  "et-aa": "ET-AA", "et-af": "ET-AF", "et-am": "ET-AM", "et-be": "ET-BE",
+  "et-ce": "ET-CE", "et-dd": "ET-DD", "et-ga": "ET-GA", "et-ha": "ET-HA",
+  "et-or": "ET-OR", "et-si": "ET-SI", "et-so": "ET-SO", "et-sn": "ET-SN",
+  "et-sw": "ET-SW", "et-ti": "ET-TI"
+} -%}
+{%- set zone_id_map = {
+  "harari_zone": "harari_zone_ha",
+  "kilbati_zone_2": "kilbati_zone2",
+  "sidama_zone": "sidama_zone_si"
+} -%}
+{%- set household_region_code = household_location.get("household_region_code") or location.get("region_code") -%}
+{%- set household_zone_code = household_location.get("household_zone_subcity_code") or location.get("zone_subcity_code") -%}
+{%- set household_woreda_code = household_location.get("household_woreda_code") or location.get("woreda_code") -%}
+{%- set household_kebele_code = household_location.get("household_kebele") or location.get("kebele") -%}
+{%- set household_region_id = region_id_map.get((household_region_code or "")|string|trim|lower, household_region_code) if household_region_code else none -%}
+{%- set household_zone_id = zone_id_map.get((household_zone_code or "")|string|trim|lower, household_zone_code) if household_zone_code else none -%}
+{%- set household_woreda_id = household_woreda_code if household_woreda_code else none -%}
+{%- set household_geo_lowest_id = household_woreda_id or household_zone_id or household_region_id or none -%}
+{%- set household_address_parts = [household_kebele_code, household_woreda_code, household_zone_code, household_region_code] | reject("none") | list -%}
+{%- set household_address_descriptor = household_location.get("household_address_descriptor") or location.get("address_descriptor") or (household_address_parts | join(", ") if household_address_parts else none) -%}
+{%- set location_gps = household_gps if household_gps else gps -%}
+{%- set location_coordinates = household_coordinates if household_coordinates else coordinates -%}
+{%- set location_gps_properties = household_gps_properties if household_gps_properties else gps_properties -%}
+{%- set geo = namespace(hierarchy=[]) -%}
+{%- if household_region_id -%}
+  {%- set geo.hierarchy = geo.hierarchy + [{"level": "region", "level_id": "region", "level_mnemonic": "region", "level_value_mnemonic": household_region_code, "level_value_id": household_region_id}] -%}
+{%- endif -%}
+{%- if household_zone_id -%}
+  {%- set geo.hierarchy = geo.hierarchy + [{"level": "sub_city", "level_id": "sub_city", "level_mnemonic": "sub_city", "level_value_mnemonic": household_zone_code, "level_value_id": household_zone_id}] -%}
+{%- endif -%}
+{%- if household_woreda_id -%}
+  {%- set geo.hierarchy = geo.hierarchy + [{"level": "woreda", "level_id": "woreda", "level_mnemonic": "woreda", "level_value_mnemonic": household_woreda_code, "level_value_id": household_woreda_id}] -%}
+{%- endif -%}
+{%- set rooms_count = dwelling.get("rooms_count", roster.get("rooms_count")) -%}
+{%- set overcrowding_raw = dwelling.get("overcrowding_indicator", roster.get("overcrowding_indicator")) -%}
+{%- if overcrowding_raw is not none and overcrowding_raw != "" -%}
+  {%- set overcrowding_indicator = overcrowding_raw -%}
+{%- elif rooms_count and roster.get("household_size_total") and (rooms_count | float) > 0 -%}
+  {%- set overcrowding_indicator = ((roster.get("household_size_total") | float) / (rooms_count | float)) -%}
+{%- else -%}
+  {%- set overcrowding_indicator = none -%}
+{%- endif -%}
+{%- set headship_type_map = {
+  "female-headed": "FEMALE_HEADED",
+  "child-headed": "CHILD_HEADED",
+  "elderly-headed": "ELDERLY_HEADED",
+  "disabled-headed": "DISABLED_HEADED",
+  "male-headed": "MALE_HEADED",
+  "female_headed": "FEMALE_HEADED",
+  "child_headed": "CHILD_HEADED",
+  "elderly_headed": "ELDERLY_HEADED",
+  "disabled_headed": "DISABLED_HEADED",
+  "male_headed": "MALE_HEADED"
+} -%}
+{%- set headship_type_raw = (roster.get("headship_type") or "")|string|lower -%}
+{%- set floor_material_map = {
+  "soil": "EARTH",
+  "earth": "EARTH",
+  "wood": "WOOD",
+  "cement": "CEMENT",
+  "tile": "TILE",
+  "other": "OTHER"
+} -%}
+{%- set sanitation_type_map = {
+  "flush": "FLUSH_TOILET",
+  "flush_toilet": "FLUSH_TOILET",
+  "pit_latrine": "PIT_LATRINE",
+  "ventilated_improved_pit": "VENTILATED_IMPROVED_PIT",
+  "ventilated improved pit": "VENTILATED_IMPROVED_PIT",
+  "composting_toilet": "COMPOSTING_TOILET",
+  "composting toilet": "COMPOSTING_TOILET",
+  "open_defecation": "OPEN_DEFECATION",
+  "open defecation": "OPEN_DEFECATION",
+  "other": "OTHER"
+} -%}
+{%- set lighting_source_map = {
+  "electricity": "GRID",
+  "grid": "GRID",
+  "solar": "SOLAR",
+  "kerosene": "KEROSENE",
+  "none": none
+} -%}
+{%- set water_source_map = {
+  "piped": "PIPED",
+  "borehole": "BOREHOLE",
+  "protected_well": "PROTECTED_WELL",
+  "unprotected_well": "UNPROTECTED_WELL",
+  "spring": "SPRING",
+  "river": "RIVER",
+  "rainwater": "RAINWATER",
+  "tankertrunk": "TANKER_TRUCK",
+  "tanker_truck": "TANKER_TRUCK",
+  "tanker truck": "TANKER_TRUCK",
+  "other": "OTHER"
+} -%}
+{%- set cooking_fuel_type_map = {
+  "gas": "LPG",
+  "lpg": "LPG",
+  "firewood": "FIREWOOD",
+  "charcoal": "CHARCOAL",
+  "electricity": "ELECTRICITY",
+  "biogas": "BIOGAS",
+  "kerosene": "KEROSENE",
+  "dung": "DUNG",
+  "other": "OTHER"
+} -%}
+{%- set water_raw = (dwelling.get("water_source_type") or "")|string|trim|lower -%}
+{%- set water_norm = water_source_map.get(water_raw, (water_raw|upper if water_raw else none)) -%}
+{%- set sanitation_raw = (dwelling.get("sanitation_type") or "")|string|trim|lower -%}
+{%- set sanitation_norm = sanitation_type_map.get(sanitation_raw, (sanitation_raw|upper|replace(" ", "_") if sanitation_raw else none)) -%}
+{%- set lighting_raw = (dwelling.get("lighting_source") or "")|string|trim|lower -%}
+{%- set lighting_norm = lighting_source_map.get(lighting_raw, (lighting_raw|upper if lighting_raw and lighting_raw != "none" else none)) -%}
+{%- set elderly_raw = roster.get("elderly_member_present") -%}
+{%- set elderly_member_present = true if elderly_raw in ["yes", "YES", "true", "TRUE", true] else (false if elderly_raw in ["no", "NO", "false", "FALSE", false] else elderly_raw) -%}
+{%- set first_name = demographics.get("individual_first_name") -%}
+{%- set middle_name = demographics.get("individual_middle_name") -%}
+{%- set last_name = demographics.get("individual_last_name") -%}
+{%- set gender_raw = (demographics.get("individual_gender") or "")|string|trim|lower -%}
+{%- set gender = gender_map.get(gender_raw, (gender_raw|upper if gender_raw else none)) -%}
+{
+  "household_roster": [
+    {
+      "household_size_total": {{ roster.get("household_size_total") | tojson }},
+      "household_size_adults": {{ roster.get("household_size_adults") | tojson }},
+      "household_size_children_u5": {{ roster.get("household_size_children_u5") | tojson }},
+      "household_size_school_age": {{ roster.get("household_size_school_age") | tojson }},
+      "household_size_elderly": {{ roster.get("household_size_elderly") | tojson }},
+      "rooms_count": {{ (rooms_count if rooms_count not in [none, ""] else none) | tojson }},
+      "overcrowding_indicator": {{ (overcrowding_indicator if overcrowding_indicator not in [none, ""] else none) | tojson }},
+      "headship_type": {{ headship_type_map.get(headship_type_raw, headship_type_raw|upper if headship_type_raw else none) | tojson }},
+      "elderly_member_present": {{ elderly_member_present | tojson }},
+      {#- ODK select_multiple arrives as a space-separated lowercase string; schema wants a list of enum values. -#}
+      {%- set hh_assets_raw = roster.get("household_assets_lists") -%}
+      {%- if hh_assets_raw is string -%}
+        {%- set hh_assets = (hh_assets_raw|upper).split() or none -%}
+      {%- elif hh_assets_raw -%}
+        {%- set hh_assets = hh_assets_raw|map("upper")|list -%}
+      {%- else -%}
+        {%- set hh_assets = none -%}
+      {%- endif -%}
+      "household_assets": {{ hh_assets | tojson }}
+    }
+  ],
+  "household_program": [
+    {%- for row in household_program_rows %}
+    {%- set hp_name_raw = (row.get("household_program_name") or row.get("household_program_name_other") or "")|string|lower -%}
+    {
+      "program_id": {{ (row.get("household_program_id") or none) | tojson }},
+      "program_name": {{ (hp_name_raw|upper if hp_name_raw else none) | tojson }},
+      "program_start_date": {{ (row.get("household_program_start_date") or none) | tojson }},
+      "program_exit_date": {{ (row.get("household_program_exit_date") or none) | tojson }}
+    }{{ "," if not loop.last else "" }}
+    {%- endfor %}
+  ],
+  "household_shocks": [
+    {%- for shock in shock_rows %}
+    {
+      "shocks_last_12m": {{ ((shock.get("shock_type") or shock.get("shock_type_other") or "") | upper or none) | tojson }},
+      "shock_start_date": {{ (shock.get("shock_start_date") or none) | tojson }},
+      "shock_end_date": {{ (shock.get("shock_end_date") or none) | tojson }}
+    }{{ "," if not loop.last else "" }}
+    {%- endfor %}
+  ],
+  "household_location_details": [
+    {
+      "kebele_code": {{ household_kebele_code | tojson }},
+      "locality_ea_code": {{ household_location.get("household_locality_ea_code") | tojson }},
+      "address_descriptor": {{ household_address_descriptor | tojson }},
+      "geo_lowest_level_value_id": {{ (household_geo_lowest_id or none) | tojson }},
+      "geo_code_hierarchy_json": {
+        "hierarchy": {{ geo.hierarchy | tojson }},
+        "lowest_level_value_id": {{ (household_geo_lowest_id or none) | tojson }},
+        "kebele": {"id": null, "name": {{ (household_kebele_code or none) | tojson }}},
+        "woreda": {"id": {{ (household_woreda_id or none) | tojson }}, "name": {{ (household_woreda_code or none) | tojson }}},
+        "sub_city": {"id": {{ (household_zone_id or none) | tojson }}, "name": {{ (household_zone_code or none) | tojson }}},
+        "zone": {"id": {{ (household_zone_id or none) | tojson }}, "name": {{ (household_zone_code or none) | tojson }}},
+        "region": {"id": {{ (household_region_id or none) | tojson }}, "name": {{ (household_region_code or none) | tojson }}}
+      },
+      "gps_latitude": {{ ((location_coordinates[1] if location_coordinates | length > 1 else none) or none) | tojson }},
+      "gps_longitude": {{ ((location_coordinates[0] if location_coordinates | length > 0 else none) or none) | tojson }},
+      "gps_accuracy": {{ location_gps_properties.get("accuracy") | tojson }}
+    }
+  ],
+  "housing_and_services": [
+    {
+      "dwelling_type": {{ (dwelling.get("dwelling_type") | upper if dwelling.get("dwelling_type") else none) | tojson }},
+      "roof_material": {{ (dwelling.get("roof_material") | upper if dwelling.get("roof_material") else none) | tojson }},
+      "wall_material": {{ (dwelling.get("wall_material") | upper if dwelling.get("wall_material") else none) | tojson }},
+      "floor_material": {{ floor_material_map.get(dwelling.get("floor_material"), dwelling.get("floor_material") | upper if dwelling.get("floor_material") else none) | tojson }},
+      "tenure_status": {{ (dwelling.get("tenure_status") | upper if dwelling.get("tenure_status") else none) | tojson }},
+      "water_source_type": {{ (water_norm or none) | tojson }},
+      "water_distance_minutes": {{ dwelling.get("water_distance_minutes") | tojson }},
+      "sanitation_type": {{ (sanitation_norm or none) | tojson }},
+      "lighting_source": {{ (lighting_norm or none) | tojson }},
+      "cooking_fuel_type": {{ cooking_fuel_type_map.get((dwelling.get("cooking_fuel_type") or "")|string|trim|lower, dwelling.get("cooking_fuel_type") | upper if dwelling.get("cooking_fuel_type") else none) | tojson }},
+      "rooms_count": {{ (rooms_count if rooms_count not in [none, ""] else none) | tojson }},
+      "overcrowding_indicator": {{ (overcrowding_indicator if overcrowding_indicator not in [none, ""] else none) | tojson }}
+    }
+  ],
+  "household_members": [
+    {%- if household_members %}
+    {%- for member in household_members %}
+    {%- set member_first_name = member.get("first_name") or member.get("household_first_name") -%}
+    {%- set member_middle_name = member.get("middle_name") or member.get("household_middle_name") -%}
+    {%- set member_last_name = member.get("last_name") or member.get("household_last_name") -%}
+    {%- set member_gender_raw = (member.get("gender") or member.get("household_gender") or "")|string|trim|lower -%}
+    {%- set member_gender = gender_map.get(member_gender_raw, (member_gender_raw|upper if member_gender_raw else none)) %}
+    {%- set member_fayda_raw = member.get("household_fayda_id") -%}
+    {%- set member_has_national_id = true if member_fayda_raw in ["yes", "YES", "true", "TRUE", true] else (false if member_fayda_raw in ["no", "NO", "false", "FALSE", false] else none) -%}
+    {%- set member_is_head_raw = member.get("is_head") -%}
+    {%- set member_is_head = true if member_is_head_raw in ["yes", "YES", "true", "TRUE", true] else (false if member_is_head_raw in ["no", "NO", "false", "FALSE", false] else none) -%}
+    {%- set member_relationship_raw = member.get("relationship_to_head") -%}
+    {
+      "foundational_id": {{ (member.get("faydaid") or member.get("foundational_id") or member.get("household_faydaid") or none) | tojson }},
+      "has_national_id": {{ member_has_national_id | tojson }},
+      "rid": {{ (member.get("rid") or member.get("household_rid") or none) | tojson }},
+      "prefix": {{ (prefix_map.get((member.get("prefix") or "")|string|trim|lower) if member.get("prefix") else none) | tojson }},
+      "first_name": {{ (member_first_name or none) | tojson }},
+      "middle_name": {{ (member_middle_name or none) | tojson }},
+      "last_name": {{ (member_last_name or none) | tojson }},
+      "suffix": {{ (member.get("suffix") or none) | tojson }},
+      "birth_date": {{ (member.get("date_of_birth") or member.get("birth_date") or member.get("household_date_of_birth") or none) | tojson }},
+      "gender": {{ member_gender | tojson }},
+      "is_head": {{ member_is_head | tojson }},
+      "relationship_to_head": {{ (member_relationship_raw | upper if member_relationship_raw else none) | tojson }}
+    }{{ "," if not loop.last else "" }}
+    {%- endfor %}
+    {%- else %}
+    {
+      "foundational_id": {{ registry_keys.get("faydaid") | tojson }},
+      "has_national_id": {{ (true if registry_keys.get("fayda_id") in ["yes", "YES", "true", "TRUE", true] else (false if registry_keys.get("fayda_id") in ["no", "NO", "false", "FALSE", false] else none)) | tojson }},
+      "rid": {{ registry_keys.get("rid") | tojson }},
+      "prefix": null,
+      "first_name": {{ first_name | tojson }},
+      "middle_name": {{ middle_name | tojson }},
+      "last_name": {{ last_name | tojson }},
+      "suffix": null,
+      "birth_date": {{ demographics.get("individual_date_of_birth") | tojson }},
+      "gender": {{ gender | tojson }}
+    }
+    {%- endif %}
+  ]
+}

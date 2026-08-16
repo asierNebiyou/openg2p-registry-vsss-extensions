@@ -1,0 +1,21 @@
+{{- if and .Values.connector.enabled .Values.connector.seed.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-connector-seed
+  labels: {{- include "connector.labels" . | nindent 4 }}
+    app.kubernetes.io/component: connector-seed
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "14"
+    helm.sh/hook-delete-policy: before-hook-creation
+data:
+  seed_connectors.py: |-
+{{ .Files.Get "files/connector-seed/seed_connectors.py" | indent 4 }}
+  # Connector definitions (non-secret parts). ${ENV_VAR} placeholders are
+  # resolved by the seed script from the Job's environment, which loads the
+  # Secret named by connector.seed.existingSecret. Strings are rendered
+  # through tpl so release-scoped hostnames resolve at install time.
+  connectors.json: |-
+{{ include "common.tplvalues.render" (dict "value" .Values.connector.seed.connectors "context" $) | fromYamlArray | toPrettyJson | indent 4 }}
+{{- end }}

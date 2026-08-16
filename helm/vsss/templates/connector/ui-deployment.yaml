@@ -1,0 +1,47 @@
+{{- if and .Values.connector.enabled .Values.connector.ui.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-connector-ui
+  labels: {{- include "connector.labels" . | nindent 4 }}
+    app.kubernetes.io/component: connector-ui
+spec:
+  replicas: {{ .Values.connector.ui.replicaCount }}
+  selector:
+    matchLabels: {{- include "connector.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: connector-ui
+  template:
+    metadata:
+      labels: {{- include "connector.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: connector-ui
+    spec:
+      serviceAccountName: {{ include "connector.serviceAccountName" . }}
+      {{- include "connector.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: connector-ui
+          image: "{{ .Values.connector.ui.image.repository }}:{{ .Values.connector.ui.image.tag }}"
+          imagePullPolicy: {{ .Values.connector.ui.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.connector.ui.containerPort }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 6
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          {{- if .Values.connector.ui.resources }}
+          resources: {{- toYaml .Values.connector.ui.resources | nindent 12 }}
+          {{- end }}
+{{- end }}

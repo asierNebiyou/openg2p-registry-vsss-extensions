@@ -1,0 +1,17 @@
+{{- if and .Values.connector.enabled .Values.connector.ui.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-connector-ui
+  labels: {{- include "connector.labels" . | nindent 4 }}
+    app.kubernetes.io/component: connector-ui
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.connector.ui.service.port }}
+      targetPort: {{ .Values.connector.ui.containerPort }}
+      protocol: TCP
+  selector: {{- include "connector.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: connector-ui
+{{- end }}

@@ -1,0 +1,64 @@
+{{- if and .Values.connector.enabled .Values.connector.api.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-connector-api
+  labels: {{- include "connector.labels" . | nindent 4 }}
+    app.kubernetes.io/component: connector-api
+spec:
+  {{- if not .Values.connector.api.autoscaling.enabled }}
+  replicas: {{ .Values.connector.api.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels: {{- include "connector.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: connector-api
+  template:
+    metadata:
+      labels: {{- include "connector.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: connector-api
+    spec:
+      serviceAccountName: {{ include "connector.serviceAccountName" . }}
+      {{- include "connector.imagePullSecrets" . | nindent 6 }}
+      {{- if .Values.connector.postgresCheckerInit.enabled }}
+      initContainers:
+        {{- include "connector.postgresCheckerInit" . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: connector-api
+          image: "{{ .Values.connector.image.repository }}:{{ .Values.connector.image.tag }}"
+          imagePullPolicy: {{ .Values.connector.image.pullPolicy }}
+          args: ["api"]
+          ports:
+            - name: http
+              containerPort: {{ .Values.connector.api.containerPort }}
+              protocol: TCP
+          env:
+            {{- include "connector.commonEnv" . | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 6
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          {{- if .Values.connector.api.resources }}
+          resources: {{- toYaml .Values.connector.api.resources | nindent 12 }}
+          {{- end }}
+{{- end }}

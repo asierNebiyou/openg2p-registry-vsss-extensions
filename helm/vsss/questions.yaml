@@ -1,0 +1,305 @@
+questions:
+
+# General
+- variable: global.registryHostname
+  description: Hostname under which all Registry services will be accessed
+  type: string
+  label: Registry Hostname
+  group: General
+
+- variable: global.postgresqlHost
+  description: PostgreSQL server host
+  type: string
+  label: PostgreSQL Server Host
+  group: General
+
+- variable: global.authRedisInstallationName
+  description: Redis host used for staff auth sessions. Must match IAM (commons-services) Redis — typically commons-redis-master. Do not use the per-release registry Redis here or login will 401/reload-loop.
+  type: string
+  label: Auth Redis Host (IAM-shared)
+  group: General
+  default: commons-redis-master
+
+- variable: global.keycloakBaseUrl
+  description: Keycloak Base URL used in all components
+  type: string
+  label: Keycloak Base URL
+  group: General
+
+- variable: global.minioHost
+  description: "External MinIO S3 API endpoint reachable from end-user browsers (the registry generates pre-signed S3 URLs that browsers follow directly). Use the API hostname exposed by commons-base, NOT the Console hostname. Example: minio-api.<namespace>.openg2p.org (do not include scheme or trailing slash). MinIO is assumed to be served over HTTPS via the Istio gateway."
+  type: string
+  label: MinIO S3 API Host
+  group: General
+
+- variable: keycloak-init.enabled
+  description: Run Keycloak Init to create realm and OIDC client
+  type: boolean
+  label: Keycloak Init
+  group: General
+
+# Data Policy — Keycloak role sync
+- variable: global.keycloakDataPolicyRoleSyncEnabled
+  description: When true, staff-portal-api publishes data policies to Keycloak as DP_<mnemonic> client roles on the registry staff-portal OIDC client.
+  type: boolean
+  label: Data Policy Keycloak Role Sync
+  group: Data Policy
+  default: true
+
+- variable: global.keycloakAdminClientId
+  description: Keycloak service-account client ID used for Admin API calls (must match the clientId provisioned by this chart's keycloak-init, typically registry-staff-portal).
+  type: string
+  label: Keycloak Admin Client ID
+  group: Data Policy
+  default: registry-staff-portal
+
+- variable: global.keycloakAdminClientSecret
+  description: Kubernetes Secret name holding the Keycloak admin client password (created by keycloak-init for registry-staff-portal).
+  type: string
+  label: Keycloak Admin Client Secret Name
+  group: Data Policy
+  default: registry-staff-portal
+
+- variable: staffPortalApi.enabled
+  description: Install Staff Portal API
+  type: boolean
+  label: Staff Portal API
+  group: General
+
+- variable: staffPortalUi.enabled
+  description: Install Staff Portal UI
+  type: boolean
+  label: Staff Portal UI
+  group: General
+
+- variable: partnerApi.enabled
+  description: Install Partner API
+  type: boolean
+  label: Partner API
+  group: General
+
+- variable: benePortalApi.enabled
+  description: Install Beneficiary Portal API
+  type: boolean
+  label: Beneficiary Portal API
+  group: General
+
+- variable: idgenerator.enabled
+  description: Install ID Generator service
+  type: boolean
+  label: ID Generator
+  group: General
+
+# Images
+- variable: staffPortalApi.image.repository
+  description: Docker image repository for Staff Portal API
+  type: string
+  label: Staff Portal API Image Repository
+  group: Images
+
+- variable: staffPortalApi.image.tag
+  description: Docker image tag for Staff Portal API
+  type: string
+  label: Staff Portal API Image Tag
+  group: Images
+
+- variable: staffPortalUi.image.repository
+  description: Docker image repository for Staff Portal UI
+  type: string
+  label: Staff Portal UI Image Repository
+  group: Images
+
+- variable: staffPortalUi.image.tag
+  description: Docker image tag for Staff Portal UI
+  type: string
+  label: Staff Portal UI Image Tag
+  group: Images
+
+- variable: partnerApi.image.repository
+  description: Docker image repository for Partner API
+  type: string
+  label: Partner API Image Repository
+  group: Images
+
+- variable: partnerApi.image.tag
+  description: Docker image tag for Partner API
+  type: string
+  label: Partner API Image Tag
+  group: Images
+
+- variable: benePortalApi.image.repository
+  description: Docker image repository for Beneficiary Portal API
+  type: string
+  label: Beneficiary Portal API Image Repository
+  group: Images
+
+- variable: benePortalApi.image.tag
+  description: Docker image tag for Beneficiary Portal API
+  type: string
+  label: Beneficiary Portal API Image Tag
+  group: Images
+
+- variable: celeryBeatProducer.image.repository
+  description: Docker image repository for Celery Beat Producer
+  type: string
+  label: Celery Beat Producer Image Repository
+  group: Images
+
+- variable: celeryBeatProducer.image.tag
+  description: Docker image tag for Celery Beat Producer
+  type: string
+  label: Celery Beat Producer Image Tag
+  group: Images
+
+- variable: celeryWorker.image.repository
+  description: Docker image repository for Celery Worker
+  type: string
+  label: Celery Worker Image Repository
+  group: Images
+
+- variable: celeryWorker.image.tag
+  description: Docker image tag for Celery Worker
+  type: string
+  label: Celery Worker Image Tag
+  group: Images
+
+# Logging is handled cluster-wide by OpenTelemetry + Loki; no per-chart config.
+
+
+# DB Seed
+- variable: dbSeed.enabled
+  description: Run DB seed Job to load configuration SQL scripts after pods start
+  type: boolean
+  label: Enable DB Seed
+  group: DB Seed
+
+- variable: dbSeed.loadSampleData
+  description: Also load sample/demo data into the registry (100 households + 500 individuals plus VSSS sub-tables). Off by default.
+  type: boolean
+  label: Load Sample Data
+  group: DB Seed
+
+- variable: dbSeed.loadImages
+  description: Upload 500 sample profile images to MinIO and link them to the seeded individuals. Requires Load Sample Data to be enabled.
+  type: boolean
+  label: Load Sample Images
+  group: DB Seed
+
+- variable: dbSeed.loadTemplates
+  description: Upload Jinja templates from the db-seed image to MinIO after SQL seed (object key = filename). Requires MinIO to be reachable at global.minioHost.
+  type: boolean
+  label: Load Templates to MinIO
+  group: DB Seed
+
+- variable: dbSeed.image.repository
+  description: Docker image repository for the DB seed container
+  type: string
+  label: DB Seed Image Repository
+  group: DB Seed
+
+- variable: dbSeed.image.tag
+  description: Docker image tag for the DB seed container
+  type: string
+  label: DB Seed Image Tag
+  group: DB Seed
+
+# ID Generator
+- variable: idgenerator.idGenerator.appConfig.idTypesNote
+  description: "Default ID types: individual (12 digits), household (10 digits). To add, remove, or modify ID types, switch to 'Edit YAML' and update the idgenerator.idGenerator.appConfig.idTypes section."
+  type: string
+  label: ID Types Configuration
+  group: ID Generator
+  default: "See description — edit YAML to configure"
+
+# Audit Manager
+- variable: global.auditEnabled
+  description: Master switch for emitting audit events to OpenG2P Audit Manager. Must be true AND global.auditManagerUrl must be set for any audits to flow. Available from staff-portal-api 1.1.x.
+  type: boolean
+  label: Audit Enabled
+  group: Audit Manager
+
+- variable: global.auditManagerUrl
+  description: Internal URL of the OpenG2P Audit Manager service (e.g. http://audit-manager:80 when in the same namespace).
+  type: string
+  label: Audit Manager URL
+  group: Audit Manager
+
+- variable: global.auditAnonymousFailures
+  description: When true, also audit rejected anonymous calls (401/403). Set false to skip them and only audit authenticated user calls.
+  type: boolean
+  label: Audit Anonymous Failures
+  group: Audit Manager
+
+# AWE
+- variable: global.aweEnabled
+  description: Enable AWE integration on staff-portal-api and seed AWE DB from db-seed job
+  type: boolean
+  label: Enable AWE Integration
+  group: AWE
+
+- variable: global.aweBaseUrl
+  description: Public AWE API base URL (host only, no /v1/awe path)
+  type: string
+  label: AWE Base URL
+  group: AWE
+
+- variable: global.aweCallbackSecretId
+  description: callback_secret.id in AWE DB (must match seeded row)
+  type: string
+  label: AWE Callback Secret ID
+  group: AWE
+
+- variable: global.aweHttpTimeoutSeconds
+  description: HTTP timeout (seconds) for outbound AWE API calls
+  type: int
+  label: AWE HTTP Timeout (s)
+  group: AWE
+
+- variable: global.aweWebhookTimestampToleranceSeconds
+  description: Max clock skew (seconds) for inbound AWE webhook signatures
+  type: int
+  label: AWE Webhook Timestamp Tolerance (s)
+  group: AWE
+
+- variable: global.aweApproverUserPassword
+  description: Initial Keycloak password for seeded approver users
+  type: string
+  label: AWE Approver User Password
+  group: AWE
+
+- variable: openg2p-awe.enabled
+  description: Install AWE subchart (required for AWE seeding and staff-portal integration)
+  type: boolean
+  label: Enable AWE Subchart
+  group: AWE
+
+# Connector
+- variable: connector.enabled
+  description: Deploy the connector stack (api, worker, beat, admin UI) that pulls registrations from ODK Central and WebSub hubs into the registry
+  type: boolean
+  label: Enable Connector
+  group: Connector
+
+- variable: global.connectorHostname
+  description: Public hostname for the connector API + admin UI (WebSub hubs deliver webhooks to https://<host>/webhook/...)
+  type: string
+  label: Connector Hostname
+  group: Connector
+
+- variable: connector.image.tag
+  description: Image tag for the connector service (api/worker/beat roles)
+  type: string
+  label: Connector Service Image Tag
+  group: Connector
+
+- variable: connector.seed.enabled
+  description: Seed connector definitions (EDRMC WebSub, UD SR WebSub, ODK VSSS) through the connector API after install/upgrade. Credentials come from the Secret named <release>-connector-seed.
+  type: boolean
+  label: Seed Connector Definitions
+  group: Connector
+
+- variable: dbSeed.seedMasterData
+  description: Seed g2p_partners rows for connector sender ids into the shared master-data DB (required for Partner API to accept connector envelopes)
+  type: boolean
+  label: Seed Master-Data Partners
+  group: Connector
