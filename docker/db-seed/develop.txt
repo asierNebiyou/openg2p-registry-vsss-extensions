@@ -1,0 +1,4 @@
+#!openg2p/openg2p-vsss-db-seed:develop
+
+# Built from repo-root context (see docker/scripts/build-db-seed.sh / developer docker-vsss-build).
+# No pip adapters — Dockerfile copies extension SQL/templates directly.
