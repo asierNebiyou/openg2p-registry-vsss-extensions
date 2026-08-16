@@ -145,6 +145,14 @@ else
   BUILDX=0
 fi
 
+
+# Prefer Python 3.10+ (parse_service uses modern typing).
+_PY3=""
+for _c in python3.12 python3.11 python3.10 python3; do
+  if command -v "$_c" >/dev/null 2>&1; then _PY3="$(command -v "$_c")"; break; fi
+done
+[[ -n "$_PY3" ]] || die "python3 not found"
+
 # ---------------------------------------------------------------------------
 # Process each service file
 # ---------------------------------------------------------------------------
@@ -170,7 +178,7 @@ for SERVICE_FILE in "${SERVICE_FILES[@]}"; do
   # relative paths in the spec files are resolved from. The build context
   # itself (--repo-root) is docker/, so the copied trees land in
   # docker/local_deps/<pkg>/ and adapters.requirements.txt lands in docker/.
-  python3 "${SCRIPT_DIR}/parse_service.py" \
+  "${_PY3}" "${SCRIPT_DIR}/parse_service.py" \
     --service-file "${SERVICE_FILE}" \
     --repo-root    "${REPO_ROOT}" \
     --source-root  "${PROJECT_ROOT}" \

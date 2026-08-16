@@ -1,3 +1,4 @@
+from __future__ import annotations
 #!/usr/bin/env python3
 """
 parse_service.py — Parses an OpenG2P service spec file and emits a shell-sourceable
