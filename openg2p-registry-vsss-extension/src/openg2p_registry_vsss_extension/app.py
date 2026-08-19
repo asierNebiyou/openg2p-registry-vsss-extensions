@@ -202,14 +202,36 @@ async def _ensure_vsss_schema(conn) -> None:
     await conn.execute(
         text(
             """
+            DO $$
+            BEGIN
+              IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'g2p_registry_documents'
+                  AND column_name = 'filename'
+              ) THEN
+                UPDATE g2p_registry_documents
+                SET source_filename = COALESCE(
+                  NULLIF(source_filename, ''),
+                  NULLIF(filename, ''),
+                  document_id
+                );
+              ELSE
+                UPDATE g2p_registry_documents
+                SET source_filename = COALESCE(
+                  NULLIF(source_filename, ''),
+                  document_id
+                );
+              END IF;
+            END $$;
+            """
+        )
+    )
+    await conn.execute(
+        text(
+            """
             UPDATE g2p_registry_documents
             SET
               bucket = COALESCE(NULLIF(bucket, ''), 'default'),
-              source_filename = COALESCE(
-                NULLIF(source_filename, ''),
-                NULLIF(filename, ''),
-                document_id
-              ),
               created_by = COALESCE(NULLIF(created_by, ''), 'system'),
               created_at = COALESCE(created_at, NOW())
             """
