@@ -192,6 +192,36 @@ async def _ensure_vsss_schema(conn) -> None:
             )
         )
 
+    # Lookup tables used by seed SQL. Older registry-platform migrate paths
+    # may skip them; create_all also will not add missing tables after a
+    # partial first migrate.
+    await conn.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS g2p_attributes (
+              attribute_id varchar PRIMARY KEY,
+              attribute_code varchar NOT NULL UNIQUE,
+              attribute_display varchar NOT NULL,
+              is_hierarchical boolean NOT NULL DEFAULT false
+            )
+            """
+        )
+    )
+    await conn.execute(
+        text(
+            """
+            CREATE TABLE IF NOT EXISTS g2p_attribute_values (
+              value_id varchar PRIMARY KEY,
+              attribute_id varchar NOT NULL,
+              value_code varchar NOT NULL,
+              value_display varchar NOT NULL,
+              parent_value_id varchar,
+              sort_order integer NOT NULL DEFAULT 0
+            )
+            """
+        )
+    )
+
     # Document catalog must match Gen2 G2PRegistryDocument (bucket/source_filename/...)
     await _ensure_column(conn, "g2p_registry_documents", "bucket", "varchar")
     await _ensure_column(conn, "g2p_registry_documents", "source_filename", "varchar")
