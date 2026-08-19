@@ -2,8 +2,11 @@ global:
   registryVariant: 'vsss'
   registryHostname: '{{ .Release.Name }}.{{ .Release.Namespace }}.openg2p.org'
 
-  # Use OpenG2P platform staff/partner/celery images. The VSSS package is
-  # pip-installed at pod start (REGISTRY_EXTENSION_MODULE selects it).
+  # Use OpenG2P platform staff/partner/celery images. Pin matches latest NSR
+  # chart: openg2p-registry 0.0.0-develop.341 (NSR images FROM that base).
+  # Do not use floating :develop. The VSSS package is pip-installed at pod
+  # start (REGISTRY_EXTENSION_MODULE selects it).
+  registryPlatformImageTag: "0.0.0-develop.341"
   registryExtensionModule: openg2p_registry_vsss_extension
   registryExtensionPip: git+https://github.com/asierNebiyou/openg2p-registry-vsss-extensions.git@develop#subdirectory=openg2p-registry-vsss-extension
 
@@ -318,7 +321,7 @@ partnerApi:
     name: ""
   image:
     repository: openg2p/openg2p-registry-partner-api
-    tag: "develop"
+    tag: "0.0.0-develop.341"
     pullPolicy: Always
     PullSecrets: "dockerhub-openg2pbotreadony"
   podSecurityContext:
@@ -655,7 +658,7 @@ staffPortalApi:
     name: ""
   image:
     repository: openg2p/openg2p-registry-staff-api
-    tag: "develop"
+    tag: "0.0.0-develop.341"
     pullPolicy: Always
     PullSecrets: "dockerhub-openg2pbotreadony"
   podSecurityContext:
@@ -973,7 +976,7 @@ celeryBeatProducer:
   replicaCount: 1
   image:
     repository: openg2p/openg2p-registry-celery
-    tag: "develop"
+    tag: "0.0.0-develop.341"
     PullSecrets: "dockerhub-openg2pbotreadony"
     pullPolicy: Always
 
@@ -1051,7 +1054,7 @@ celeryWorker:
   replicaCount: 1
   image:
     repository: openg2p/openg2p-registry-celery
-    tag: "develop"
+    tag: "0.0.0-develop.341"
     pullPolicy: Always
     PullSecrets: "dockerhub-openg2pbotreadony"
 

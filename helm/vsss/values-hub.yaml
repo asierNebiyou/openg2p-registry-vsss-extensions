@@ -1,7 +1,8 @@
 # Overlay for Hub tags that exist today.
 #
-# Staff / partner / celery: OpenG2P platform images + VSSS extension via
-# REGISTRY_EXTENSION_MODULE (see values.yaml global.registryExtension*).
+# Staff / partner / celery: same OpenG2P *platform* image tag NSR is locked to
+# (openg2p-registry chart 0.0.0-develop.341). NSR itself uses
+# openg2p/openg2p-nsr-staff-api:0.0.0-develop which is FROM that base.
 # db-seed and connector still have no OpenG2P Hub repos.
 
 dbSeed:

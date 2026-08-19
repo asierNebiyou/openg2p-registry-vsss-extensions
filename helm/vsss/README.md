@@ -47,10 +47,10 @@ Branch-name-equals-version convention:
 
 | Component | Image |
 |---|---|
-| staffPortalApi | `openg2p/openg2p-registry-staff-api:develop` + VSSS extension (`REGISTRY_EXTENSION_MODULE`) |
-| partnerApi | `openg2p/openg2p-registry-partner-api:develop` + VSSS extension |
+| staffPortalApi | `openg2p/openg2p-registry-staff-api:0.0.0-develop.341` + VSSS extension (same base NSR pins) |
+| partnerApi | `openg2p/openg2p-registry-partner-api:0.0.0-develop.341` + VSSS extension |
 | staffPortalUi | `openg2p/openg2p-registry-staff-portal-ui:1.1.1` |
-| celeryBeatProducer / celeryWorker | `openg2p/openg2p-registry-celery:develop` + VSSS extension |
+| celeryBeatProducer / celeryWorker | `openg2p/openg2p-registry-celery:0.0.0-develop.341` + VSSS extension |
 | dbSeed | `asierneb/openg2p-vsss-db-seed:develop` *(variant SQL; no OpenG2P VSSS seed image)* |
 | connector (api/worker/beat/consumer) | `asierneb/openg2p-connector-service:nsr-slashfix-202605221435` |
 | connector UI | `asierneb/openg2p-connector-ui:nsr` |
