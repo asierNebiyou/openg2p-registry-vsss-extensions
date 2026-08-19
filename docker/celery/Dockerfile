@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 RUN apk del --no-network .build-deps
 
 ENV PYTHONUNBUFFERED=1
-ENV CELERY_APP=openg2p_registry_celery_workers.main.celery_app
+ENV CELERY_APP=openg2p_registry_celery_worker.main.celery_app
 ENV CELERY_OPTS="worker --loglevel=info"
 ENV CELERY_IMPORTS=""
 

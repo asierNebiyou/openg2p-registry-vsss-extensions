@@ -212,10 +212,11 @@ dbSeed:
   # objects must exist in the templates bucket for transformation to work.
   loadTemplates: true
   image:
-    repository: openg2p/openg2p-vsss-db-seed
-    tag: "1.1.2"
+    # OpenG2P does not publish this repo yet; personal Hub copy from develop.txt.
+    repository: asierneb/openg2p-vsss-db-seed
+    tag: "develop"
     pullPolicy: Always
-    PullSecrets: "dockerhub-openg2pbotreadony"
+    PullSecrets: ""
 
   # DB Seed runs as a one-shot Helm post-install/post-upgrade hook Job.
   # It's just psql replaying SQL scripts — minimal footprint, but the
@@ -311,10 +312,10 @@ partnerApi:
     create: false
     name: ""
   image:
-    repository: openg2p/openg2p-vsss-partner-api
-    tag: "1.1.2"
+    repository: asierneb/openg2p-vsss-partner-api
+    tag: "develop"
     pullPolicy: Always
-    PullSecrets: "dockerhub-openg2pbotreadony"
+    PullSecrets: ""
   podSecurityContext:
     enabled: false
     fsGroup: 1001
@@ -646,10 +647,10 @@ staffPortalApi:
     create: false
     name: ""
   image:
-    repository: openg2p/openg2p-vsss-staff-portal-api
-    tag: "1.1.2"
+    repository: asierneb/openg2p-vsss-staff-portal-api
+    tag: "develop"
     pullPolicy: Always
-    PullSecrets: "dockerhub-openg2pbotreadony"
+    PullSecrets: ""
   podSecurityContext:
     enabled: false
     fsGroup: 1001
@@ -836,8 +837,9 @@ staffPortalUi:
     create: false
     name: ""
   image:
+    # Shared UI — published by OpenG2P. Tag 1.1.2 does not exist on Hub.
     repository: openg2p/openg2p-registry-staff-portal-ui
-    tag: "1.1.2"
+    tag: "1.1.1"
     pullPolicy: Always
   podSecurityContext:
     enabled: false
@@ -961,9 +963,9 @@ celeryBeatProducer:
   nameOverride: celery-beat-producer
   replicaCount: 1
   image:
-    repository: openg2p/openg2p-vsss-celery
-    tag: "1.1.2"
-    PullSecrets: "dockerhub-openg2pbotreadony"
+    repository: asierneb/openg2p-vsss-celery
+    tag: "develop"
+    PullSecrets: ""
     pullPolicy: Always
 
   # Celery Beat Producer is NOT just a scheduler in this chart — it also
@@ -998,7 +1000,7 @@ celeryBeatProducer:
     REGISTRY_CELERY_BEAT_OUTGEST_DATA_PUBLISH_BEAT_PRODUCER_FREQUENCY: 20
     REGISTRY_CELERY_BEAT_OUTGEST_TOPIC_REGISTER_BEAT_PRODUCER_FREQUENCY: 20
     REGISTRY_CELERY_BEAT_DEDUPLICATION_BEAT_PRODUCER_FREQUENCY: 30
-    CELERY_APP: "openg2p_registry_celery_beat_producers.main.celery_app"
+    CELERY_APP: "openg2p_registry_celery_beat.main.celery_app"
     CELERY_OPTS: "worker --beat --loglevel=info --schedule=/tmp/celery-beat-schedule.db"
 
   envVarsFrom:
@@ -1037,10 +1039,10 @@ celeryWorker:
   nameOverride: celery-worker
   replicaCount: 1
   image:
-    repository: openg2p/openg2p-vsss-celery
-    tag: "1.1.2"
+    repository: asierneb/openg2p-vsss-celery
+    tag: "develop"
     pullPolicy: Always
-    PullSecrets: "dockerhub-openg2pbotreadony"
+    PullSecrets: ""
 
   # Celery Worker is the largest variable-load component in the chart. It
   # processes async tasks (bulk partner ingest, data transformation,
@@ -1082,7 +1084,7 @@ celeryWorker:
     REGISTRY_CELERY_WORKERS_TEMPLATE_BUCKET_NAME: '{{ tpl .Values.global.templateBucketName $ }}'
     REGISTRY_CELERY_WORKERS_FUNCTIONAL_ID_GENERATION_URL: '{{ tpl .Values.global.idGeneratorInternalUrl $ }}'
     REGISTRY_CELERY_WORKERS_ID_GENERATION_ALLOCATION_PATH: '/idgenerator/{id_type}/id'
-    CELERY_APP: "openg2p_registry_celery_workers.main.celery_app"
+    CELERY_APP: "openg2p_registry_celery_worker.main.celery_app"
     CELERY_OPTS: "worker -Q registry_worker_queue --loglevel=info"
     REGISTRY_CORE_KEYCLOAK_TOKEN_URL: '{{ tpl .Values.global.keycloakIssuerUrl $ }}/protocol/openid-connect/token'
     REGISTRY_CORE_KEYCLOAK_CLIENT_ID: '{{ tpl .Values.global.authClientId $ }}'
@@ -1170,8 +1172,9 @@ connector:
   # from the openg2p-connector-service repo under the maintainer's registry;
   # switch to an openg2p/ repository once CI publishes one.
   image:
+    # OpenG2P has no connector image. asierneb has this tag (no vsss-* tag yet).
     repository: asierneb/openg2p-connector-service
-    tag: vsss-slashfix-202605221435
+    tag: nsr-slashfix-202605221435
     pullPolicy: Always
     PullSecrets: ""
 
@@ -1238,7 +1241,7 @@ connector:
       port: 80
     image:
       repository: asierneb/openg2p-connector-ui
-      tag: vsss
+      tag: nsr
       pullPolicy: Always
     resources:
       requests:

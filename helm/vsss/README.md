@@ -47,13 +47,13 @@ Branch-name-equals-version convention:
 
 | Component | Image |
 |---|---|
-| staffPortalApi | `openg2p/openg2p-vsss-staff-portal-api:develop` |
-| partnerApi | `openg2p/openg2p-vsss-partner-api:develop` |
-| staffPortalUi | `openg2p/openg2p-mowsa-registry-staff-portal-ui:develop` *(built by the `registry-platform` repo)* |
-| celeryBeatProducer / celeryWorker | `openg2p/openg2p-vsss-celery:develop` *(same image — mode picked by env vars)* |
-| dbSeed | `openg2p/openg2p-vsss-db-seed:develop` |
-| connector (api/worker/beat/consumer) | `asierneb/openg2p-connector-service:<tag>` *(built by the `openg2p-connector-service` repo)* |
-| connector UI | `asierneb/openg2p-connector-ui:<tag>` *(built by the `openg2p-connector-ui` repo)* |
+| staffPortalApi | `asierneb/openg2p-vsss-staff-portal-api:develop` *(OpenG2P Hub repo does not exist yet)* |
+| partnerApi | `asierneb/openg2p-vsss-partner-api:develop` |
+| staffPortalUi | `openg2p/openg2p-registry-staff-portal-ui:1.1.1` *(OpenG2P; `1.1.2` is not on Hub)* |
+| celeryBeatProducer / celeryWorker | `asierneb/openg2p-vsss-celery:develop` *(same image — mode picked by env vars)* |
+| dbSeed | `asierneb/openg2p-vsss-db-seed:develop` |
+| connector (api/worker/beat/consumer) | `asierneb/openg2p-connector-service:nsr-slashfix-202605221435` |
+| connector UI | `asierneb/openg2p-connector-ui:nsr` |
 
 All VSSS API/celery/db-seed images are built by this repo's docker workflows;
 the Staff Portal UI image is built by the `registry-platform` repo.

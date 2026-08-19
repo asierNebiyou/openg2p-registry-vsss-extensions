@@ -1,0 +1,57 @@
+# Overlay for a cluster that cannot pull unpublished openg2p/openg2p-vsss-* :1.1.2 tags.
+# Use with: helm upgrade ... -f helm/vsss/values.yaml -f helm/vsss/values-hub.yaml
+#
+# OpenG2P Hub (confirmed 2026-08-19):
+#   openg2p/openg2p-registry-staff-portal-ui:1.1.1  (no 1.1.2)
+#   no openg2p/openg2p-vsss-* repositories
+#   no openg2p connector images
+#
+# Personal Hub:
+#   asierneb/openg2p-vsss-{staff-portal-api,partner-api,celery,db-seed}:develop
+#   asierneb/openg2p-connector-service:nsr-slashfix-202605221435
+#   asierneb/openg2p-connector-ui:nsr
+
+dbSeed:
+  image:
+    repository: asierneb/openg2p-vsss-db-seed
+    tag: develop
+    PullSecrets: ""
+
+partnerApi:
+  image:
+    repository: asierneb/openg2p-vsss-partner-api
+    tag: develop
+    PullSecrets: ""
+
+staffPortalApi:
+  image:
+    repository: asierneb/openg2p-vsss-staff-portal-api
+    tag: develop
+    PullSecrets: ""
+
+staffPortalUi:
+  image:
+    repository: openg2p/openg2p-registry-staff-portal-ui
+    tag: "1.1.1"
+
+celeryBeatProducer:
+  image:
+    repository: asierneb/openg2p-vsss-celery
+    tag: develop
+    PullSecrets: ""
+
+celeryWorker:
+  image:
+    repository: asierneb/openg2p-vsss-celery
+    tag: develop
+    PullSecrets: ""
+
+connector:
+  image:
+    repository: asierneb/openg2p-connector-service
+    tag: nsr-slashfix-202605221435
+    PullSecrets: ""
+  ui:
+    image:
+      repository: asierneb/openg2p-connector-ui
+      tag: nsr

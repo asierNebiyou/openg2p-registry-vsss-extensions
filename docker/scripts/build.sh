@@ -122,11 +122,12 @@ if [[ "${PUSH}" == "1" ]]; then
     # shellcheck disable=SC1090
     set -a; source "${ENV_FILE}"; set +a
   fi
-  [[ -n "${DOCKER_HUB_USERNAME:-}" ]] || die "DOCKER_HUB_USERNAME is not set. Set it in docker/scripts/.env or export it."
-  [[ -n "${DOCKER_HUB_TOKEN:-}"    ]] || die "DOCKER_HUB_TOKEN is not set. Set it in docker/scripts/.env or export it."
-
-  log "Logging in to Docker Hub as ${DOCKER_HUB_USERNAME}..."
-  echo "${DOCKER_HUB_TOKEN}" | docker login --username "${DOCKER_HUB_USERNAME}" --password-stdin
+  if [[ -n "${DOCKER_HUB_USERNAME:-}" && -n "${DOCKER_HUB_TOKEN:-}" ]]; then
+    log "Logging in to Docker Hub as ${DOCKER_HUB_USERNAME}..."
+    echo "${DOCKER_HUB_TOKEN}" | docker login --username "${DOCKER_HUB_USERNAME}" --password-stdin
+  else
+    log "DOCKER_HUB_TOKEN not set; using existing docker login (Docker Desktop)."
+  fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -188,6 +189,12 @@ for SERVICE_FILE in "${SERVICE_FILES[@]}"; do
   # shellcheck disable=SC1091
   source "${SCRIPT_DIR}/_service_env.sh"
 
+  # Spec files target openg2p/*. When those Hub repos do not exist yet, set
+  # DOCKER_IMAGE_NAMESPACE=asierneb to publish under a personal account.
+  if [[ -n "${DOCKER_IMAGE_NAMESPACE:-}" ]]; then
+    SVC_IMAGE="${DOCKER_IMAGE_NAMESPACE}/${SVC_IMAGE#*/}"
+  fi
+
   log "Image      : ${SVC_IMAGE}"
   log "Dockerfile : ${SVC_DOCKERFILE}"
   log "Context    : ${SVC_CONTEXT}"
@@ -243,9 +250,24 @@ for SERVICE_FILE in "${SERVICE_FILES[@]}"; do
     log "Running: docker build --platform ${BUILD_PLATFORM} ..."
     if docker build --platform "${BUILD_PLATFORM}" "${BUILD_ARGS[@]}" "${SVC_CONTEXT}"; then
       log "✅ Build succeeded: ${SVC_IMAGE}"
+      extra_tags="${DOCKER_EXTRA_TAGS:-}"
+      if [[ -n "${extra_tags}" ]]; then
+        repo="${SVC_IMAGE%%:*}"
+        for extra in ${extra_tags}; do
+          log "Tagging ${repo}:${extra}"
+          docker tag "${SVC_IMAGE}" "${repo}:${extra}"
+        done
+      fi
       if [[ "${PUSH}" == "1" ]]; then
         log "Pushing ${SVC_IMAGE}..."
         docker push "${SVC_IMAGE}"
+        if [[ -n "${extra_tags}" ]]; then
+          repo="${SVC_IMAGE%%:*}"
+          for extra in ${extra_tags}; do
+            log "Pushing ${repo}:${extra}"
+            docker push "${repo}:${extra}"
+          done
+        fi
       fi
     else
       err "❌ Build failed: ${SVC_IMAGE}"

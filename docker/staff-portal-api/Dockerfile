@@ -21,5 +21,5 @@ ENV STAFF_PORTAL_PORT=8000
 ENV STAFF_PORTAL_NO_OF_WORKERS=8
 
 # Use module path for migrate and Gunicorn WSGI app
-CMD python3 -m openg2p_registry_staff_portal_api.main migrate; \
-    ${STAFF_PORTAL_WORKER_TYPE} "openg2p_registry_staff_portal_api.main:app" --workers ${STAFF_PORTAL_NO_OF_WORKERS} --worker-class uvicorn.workers.UvicornWorker --bind ${STAFF_PORTAL_HOST}:${STAFF_PORTAL_PORT}
+CMD python3 -m openg2p_registry_staff_api.main migrate; \
+    ${STAFF_PORTAL_WORKER_TYPE} "openg2p_registry_staff_api.main:app" --workers ${STAFF_PORTAL_NO_OF_WORKERS} --worker-class uvicorn.workers.UvicornWorker --bind ${STAFF_PORTAL_HOST}:${STAFF_PORTAL_PORT}

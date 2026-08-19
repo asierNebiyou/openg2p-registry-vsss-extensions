@@ -25,7 +25,7 @@ def _celery_tasks_dir():
     """Resolve tasks/ without importing task modules (tasks/__init__ eager-loads all workers)."""
     from pathlib import Path
 
-    import openg2p_registry_celery_workers as celery_pkg
+    import openg2p_registry_celery_worker as celery_pkg
 
     return Path(celery_pkg.__file__).resolve().parent / "tasks"
 
@@ -223,7 +223,7 @@ def patch_ingest_finalize() -> None:
     """Ensure AWE services exist before partner-ingest finalize (prefork-safe)."""
     import importlib
 
-    idw = importlib.import_module("openg2p_registry_celery_workers.tasks.ingest_data_worker")
+    idw = importlib.import_module("openg2p_registry_celery_worker.tasks.ingest_data_worker")
 
     original_finalize = getattr(idw, "_finalize_submission_async", None)
     if original_finalize is not None and not getattr(

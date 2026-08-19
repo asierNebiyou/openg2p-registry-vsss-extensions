@@ -9,6 +9,6 @@ git://v1.1.6//https://github.com/openg2p/openg2p-fastapi-common#subdirectory=ope
 
 # Core
 git://1.2//https://github.com/openg2p/iam-service#subdirectory=iam-core
-# Consolidated registry-platform repo — core + apis now live in subdirectories.
+# registry-platform develop renamed staff-portal-api -> staff-api
 git://develop//https://github.com/openg2p/registry-platform#subdirectory=core/openg2p-registry-core
-git://develop//https://github.com/openg2p/registry-platform#subdirectory=apis/openg2p-registry-staff-portal-api
+git://develop//https://github.com/openg2p/registry-platform#subdirectory=apis/openg2p-registry-staff-api
