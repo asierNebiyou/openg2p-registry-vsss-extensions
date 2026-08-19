@@ -237,3 +237,30 @@ Render Env values section
 {{- $envVars := merge (deepCopy .Values.envVars) (deepCopy .Values.envVarsFrom) -}}
 {{- include "staffPortalUi.baseEnvVars" (dict "envVars" $envVars "context" $) }}
 {{- end -}}
+
+{{/*
+Install the VSSS Python extension into emptyDir /opt/vsss-ext. Platform images
+(openg2p-registry-staff-api / partner-api / celery) already contain the API;
+REGISTRY_EXTENSION_MODULE selects this package at startup.
+*/}}
+{{- define "vsss.extensionInitContainer" -}}
+- name: install-vsss-extension
+  image: {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
+  imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+  command: ["sh", "-c"]
+  args:
+    - pip install --no-cache-dir --target /opt/vsss-ext {{ .Values.global.registryExtensionPip | quote }}
+  volumeMounts:
+    - name: vsss-extension
+      mountPath: /opt/vsss-ext
+{{- end -}}
+
+{{- define "vsss.extensionVolumeMount" -}}
+- name: vsss-extension
+  mountPath: /opt/vsss-ext
+{{- end -}}
+
+{{- define "vsss.extensionVolume" -}}
+- name: vsss-extension
+  emptyDir: {}
+{{- end -}}

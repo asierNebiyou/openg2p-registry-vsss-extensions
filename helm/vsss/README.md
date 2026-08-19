@@ -47,16 +47,17 @@ Branch-name-equals-version convention:
 
 | Component | Image |
 |---|---|
-| staffPortalApi | `asierneb/openg2p-vsss-staff-portal-api:develop` *(OpenG2P Hub repo does not exist yet)* |
-| partnerApi | `asierneb/openg2p-vsss-partner-api:develop` |
-| staffPortalUi | `openg2p/openg2p-registry-staff-portal-ui:1.1.1` *(OpenG2P; `1.1.2` is not on Hub)* |
-| celeryBeatProducer / celeryWorker | `asierneb/openg2p-vsss-celery:develop` *(same image — mode picked by env vars)* |
-| dbSeed | `asierneb/openg2p-vsss-db-seed:develop` |
+| staffPortalApi | `openg2p/openg2p-registry-staff-api:develop` + VSSS extension (`REGISTRY_EXTENSION_MODULE`) |
+| partnerApi | `openg2p/openg2p-registry-partner-api:develop` + VSSS extension |
+| staffPortalUi | `openg2p/openg2p-registry-staff-portal-ui:1.1.1` |
+| celeryBeatProducer / celeryWorker | `openg2p/openg2p-registry-celery:develop` + VSSS extension |
+| dbSeed | `asierneb/openg2p-vsss-db-seed:develop` *(variant SQL; no OpenG2P VSSS seed image)* |
 | connector (api/worker/beat/consumer) | `asierneb/openg2p-connector-service:nsr-slashfix-202605221435` |
 | connector UI | `asierneb/openg2p-connector-ui:nsr` |
 
-All VSSS API/celery/db-seed images are built by this repo's docker workflows;
-the Staff Portal UI image is built by the `registry-platform` repo.
+Staff / partner / celery use OpenG2P platform images. The VSSS Python
+package is pip-installed at pod start (`REGISTRY_EXTENSION_MODULE`).
+db-seed remains a variant image because it ships VSSS SQL/templates.
 
 ## ID Generator `idTypes`
 

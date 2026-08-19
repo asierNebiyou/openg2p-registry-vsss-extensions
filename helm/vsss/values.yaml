@@ -2,6 +2,11 @@ global:
   registryVariant: 'vsss'
   registryHostname: '{{ .Release.Name }}.{{ .Release.Namespace }}.openg2p.org'
 
+  # Use OpenG2P platform staff/partner/celery images. The VSSS package is
+  # pip-installed at pod start (REGISTRY_EXTENSION_MODULE selects it).
+  registryExtensionModule: openg2p_registry_vsss_extension
+  registryExtensionPip: git+https://github.com/asierNebiyou/openg2p-registry-vsss-extensions.git@develop#subdirectory=openg2p-registry-vsss-extension
+
   # Database
   postgresqlHost: commons-postgresql
 
@@ -312,10 +317,10 @@ partnerApi:
     create: false
     name: ""
   image:
-    repository: asierneb/openg2p-vsss-partner-api
+    repository: openg2p/openg2p-registry-partner-api
     tag: "develop"
     pullPolicy: Always
-    PullSecrets: ""
+    PullSecrets: "dockerhub-openg2pbotreadony"
   podSecurityContext:
     enabled: false
     fsGroup: 1001
@@ -358,6 +363,8 @@ partnerApi:
         credentialName: ""
 
   envVars:
+    REGISTRY_EXTENSION_MODULE: '{{ .Values.global.registryExtensionModule }}'
+    PYTHONPATH: '/opt/vsss-ext'
     REGISTRY_PARTNER_API_DB_HOSTNAME: '{{ .Values.global.postgresqlHost }}'
     REGISTRY_PARTNER_API_DB_DBNAME: '{{ tpl .Values.global.registryDB $ }}'
     REGISTRY_PARTNER_API_DB_PORT: '{{ .Values.global.registryDBPort }}'
@@ -647,10 +654,10 @@ staffPortalApi:
     create: false
     name: ""
   image:
-    repository: asierneb/openg2p-vsss-staff-portal-api
+    repository: openg2p/openg2p-registry-staff-api
     tag: "develop"
     pullPolicy: Always
-    PullSecrets: ""
+    PullSecrets: "dockerhub-openg2pbotreadony"
   podSecurityContext:
     enabled: false
     fsGroup: 1001
@@ -690,6 +697,8 @@ staffPortalApi:
         credentialName: ""
 
   envVars:
+    REGISTRY_EXTENSION_MODULE: '{{ .Values.global.registryExtensionModule }}'
+    PYTHONPATH: '/opt/vsss-ext'
     REGISTRY_STAFF_PORTAL_API_DB_HOSTNAME: '{{ .Values.global.postgresqlHost }}'
     REGISTRY_STAFF_PORTAL_API_DB_DBNAME: '{{ tpl .Values.global.registryDB $ }}'
     REGISTRY_STAFF_PORTAL_API_DB_PORT: '{{ .Values.global.registryDBPort }}'
@@ -963,9 +972,9 @@ celeryBeatProducer:
   nameOverride: celery-beat-producer
   replicaCount: 1
   image:
-    repository: asierneb/openg2p-vsss-celery
+    repository: openg2p/openg2p-registry-celery
     tag: "develop"
-    PullSecrets: ""
+    PullSecrets: "dockerhub-openg2pbotreadony"
     pullPolicy: Always
 
   # Celery Beat Producer is NOT just a scheduler in this chart — it also
@@ -982,6 +991,8 @@ celeryBeatProducer:
       memory: 256Mi
 
   envVars:
+    REGISTRY_EXTENSION_MODULE: '{{ .Values.global.registryExtensionModule }}'
+    PYTHONPATH: '/opt/vsss-ext'
     REGISTRY_CELERY_BEAT_DB_HOSTNAME: '{{ .Values.global.postgresqlHost }}'
     REGISTRY_CELERY_BEAT_DB_DBNAME: '{{ tpl .Values.global.registryDB $ }}'
     REGISTRY_CELERY_BEAT_DB_PORT: '{{ .Values.global.registryDBPort }}'
@@ -1039,10 +1050,10 @@ celeryWorker:
   nameOverride: celery-worker
   replicaCount: 1
   image:
-    repository: asierneb/openg2p-vsss-celery
+    repository: openg2p/openg2p-registry-celery
     tag: "develop"
     pullPolicy: Always
-    PullSecrets: ""
+    PullSecrets: "dockerhub-openg2pbotreadony"
 
   # Celery Worker is the largest variable-load component in the chart. It
   # processes async tasks (bulk partner ingest, data transformation,
@@ -1060,6 +1071,8 @@ celeryWorker:
       memory: 768Mi
 
   envVars:
+    REGISTRY_EXTENSION_MODULE: '{{ .Values.global.registryExtensionModule }}'
+    PYTHONPATH: '/opt/vsss-ext'
     REGISTRY_CELERY_WORKERS_DB_HOSTNAME: '{{ .Values.global.postgresqlHost }}'
     REGISTRY_CELERY_WORKERS_DB_DBNAME: '{{ tpl .Values.global.registryDB $ }}'
     REGISTRY_CELERY_WORKERS_DB_PORT: 5432
