@@ -1,0 +1,3 @@
+#!asierneb/openg2p-vsss-db-seed:1.1.3
+
+# Built from repo-root context (Dockerfile copies extension SQL/templates directly).

@@ -9,20 +9,18 @@ cd "$ROOT"
 export DOCKER_IMAGE_NAMESPACE="${DOCKER_IMAGE_NAMESPACE:-asierneb}"
 export BUILD_PLATFORM="${BUILD_PLATFORM:-linux/amd64}"
 export PUSH="${PUSH:-1}"
-export DOCKER_EXTRA_TAGS="${DOCKER_EXTRA_TAGS:-1.1.2}"
+export DOCKER_EXTRA_TAGS="${DOCKER_EXTRA_TAGS:-1.1.3}"
 
 bash docker/scripts/build.sh \
-  staff-portal-api/develop.txt \
-  partner-api/develop.txt \
-  celery/develop.txt
+  staff-portal-api/1.1.3.txt \
+  partner-api/1.1.3.txt \
+  celery/1.1.3.txt
 
-SEED="${DOCKER_IMAGE_NAMESPACE}/openg2p-vsss-db-seed:develop"
+SEED="${DOCKER_IMAGE_NAMESPACE}/openg2p-vsss-db-seed:1.1.3"
 docker build --platform "${BUILD_PLATFORM}" \
   -f docker/db-seed/Dockerfile \
   -t "${SEED}" \
-  -t "${DOCKER_IMAGE_NAMESPACE}/openg2p-vsss-db-seed:1.1.2" \
   "$ROOT"
 if [[ "${PUSH}" == "1" ]]; then
   docker push "${SEED}"
-  docker push "${DOCKER_IMAGE_NAMESPACE}/openg2p-vsss-db-seed:1.1.2"
 fi
