@@ -1,15 +1,32 @@
-# Overlay for Hub tags that exist today.
+# Overlay for public Docker Hub images (no gitlab-registry secret).
 #
-# Staff / partner / celery: same OpenG2P *platform* image tag NSR is locked to
-# (openg2p-registry chart 0.0.0-develop.341). NSR itself uses
-# openg2p/openg2p-nsr-staff-api:0.0.0-develop which is FROM that base.
-# db-seed and connector still have no OpenG2P Hub repos.
+# NSR 1.1.3 uses GitLab registry.gitlab.com/mowsa1/nsr/national-social-registry/*:1.1.3.
+# VSSS has no GitLab project; defaults in values.yaml already use these Hub tags.
 
 dbSeed:
   image:
     repository: asierneb/openg2p-vsss-db-seed
-    tag: develop
-    PullSecrets: ""
+    tag: "1.1.3"
+
+staffPortalApi:
+  image:
+    repository: asierneb/openg2p-vsss-staff-portal-api
+    tag: "1.1.3"
+
+partnerApi:
+  image:
+    repository: asierneb/openg2p-vsss-partner-api
+    tag: "1.1.3"
+
+celeryBeatProducer:
+  image:
+    repository: asierneb/openg2p-vsss-celery
+    tag: "1.1.3"
+
+celeryWorker:
+  image:
+    repository: asierneb/openg2p-vsss-celery
+    tag: "1.1.3"
 
 staffPortalUi:
   image:

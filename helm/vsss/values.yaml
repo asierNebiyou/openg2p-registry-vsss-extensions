@@ -2,13 +2,16 @@ global:
   registryVariant: 'vsss'
   registryHostname: '{{ .Release.Name }}.{{ .Release.Namespace }}.openg2p.org'
 
-  # Use OpenG2P platform staff/partner/celery images. Pin matches latest NSR
-  # chart: openg2p-registry 0.0.0-develop.341 (NSR images FROM that base).
-  # Do not use floating :develop. The VSSS package is pip-installed at pod
-  # start (REGISTRY_EXTENSION_MODULE selects it).
-  registryPlatformImageTag: "0.0.0-develop.341"
-  registryExtensionModule: openg2p_registry_vsss_extension
-  registryExtensionPip: git+https://github.com/asierNebiyou/openg2p-registry-vsss-extensions.git@develop#subdirectory=openg2p-registry-vsss-extension
+  # Do NOT set global.imagePullSecrets — it is inherited by dependency
+  # subcharts (e.g. idgenerator) and breaks their templates. Set
+  # image.pullSecrets on each private image instead.
+  #
+  # NSR tag 1.1.3 (helm/mowsa-nsr) bakes the NSR extension into GitLab images:
+  #   registry.gitlab.com/mowsa1/nsr/national-social-registry/{staff-api,partner-api,celery,db-seed,staff-ui}:1.1.3
+  #   plus pullSecrets: gitlab-registry
+  # VSSS has no equivalent GitLab project. Do not point this chart at those NSR
+  # images. Staff/partner/celery/db-seed below are VSSS-baked Hub copies at the
+  # same tag (1.1.3). Staff UI stays the shared OpenG2P UI (no VSSS UI image).
 
   # Database
   postgresqlHost: commons-postgresql
@@ -220,11 +223,9 @@ dbSeed:
   # objects must exist in the templates bucket for transformation to work.
   loadTemplates: true
   image:
-    # OpenG2P does not publish this repo yet; personal Hub copy from develop.txt.
     repository: asierneb/openg2p-vsss-db-seed
-    tag: "develop"
+    tag: "1.1.3"
     pullPolicy: Always
-    PullSecrets: ""
 
   # DB Seed runs as a one-shot Helm post-install/post-upgrade hook Job.
   # It's just psql replaying SQL scripts — minimal footprint, but the
@@ -320,10 +321,9 @@ partnerApi:
     create: false
     name: ""
   image:
-    repository: openg2p/openg2p-registry-partner-api
-    tag: "0.0.0-develop.341"
+    repository: asierneb/openg2p-vsss-partner-api
+    tag: "1.1.3"
     pullPolicy: Always
-    PullSecrets: "dockerhub-openg2pbotreadony"
   podSecurityContext:
     enabled: false
     fsGroup: 1001
@@ -366,8 +366,6 @@ partnerApi:
         credentialName: ""
 
   envVars:
-    REGISTRY_EXTENSION_MODULE: '{{ .Values.global.registryExtensionModule }}'
-    PYTHONPATH: '/opt/vsss-ext'
     REGISTRY_PARTNER_API_DB_HOSTNAME: '{{ .Values.global.postgresqlHost }}'
     REGISTRY_PARTNER_API_DB_DBNAME: '{{ tpl .Values.global.registryDB $ }}'
     REGISTRY_PARTNER_API_DB_PORT: '{{ .Values.global.registryDBPort }}'
@@ -511,7 +509,6 @@ benePortalApi:
     repository: openg2p/openg2p-registry-bene-portal-api
     tag: "1.1.2"
     pullPolicy: Always
-    PullSecrets: "dockerhub-openg2pbotreadony"
   podSecurityContext:
     enabled: false
     fsGroup: 1001
@@ -657,10 +654,9 @@ staffPortalApi:
     create: false
     name: ""
   image:
-    repository: openg2p/openg2p-registry-staff-api
-    tag: "0.0.0-develop.341"
+    repository: asierneb/openg2p-vsss-staff-portal-api
+    tag: "1.1.3"
     pullPolicy: Always
-    PullSecrets: "dockerhub-openg2pbotreadony"
   podSecurityContext:
     enabled: false
     fsGroup: 1001
@@ -700,8 +696,6 @@ staffPortalApi:
         credentialName: ""
 
   envVars:
-    REGISTRY_EXTENSION_MODULE: '{{ .Values.global.registryExtensionModule }}'
-    PYTHONPATH: '/opt/vsss-ext'
     REGISTRY_STAFF_PORTAL_API_DB_HOSTNAME: '{{ .Values.global.postgresqlHost }}'
     REGISTRY_STAFF_PORTAL_API_DB_DBNAME: '{{ tpl .Values.global.registryDB $ }}'
     REGISTRY_STAFF_PORTAL_API_DB_PORT: '{{ .Values.global.registryDBPort }}'
@@ -849,7 +843,7 @@ staffPortalUi:
     create: false
     name: ""
   image:
-    # Shared UI — published by OpenG2P. Tag 1.1.2 does not exist on Hub.
+    # NSR 1.1.3 uses GitLab mowsa1/nsr/.../staff-ui:1.1.3. No VSSS UI image exists.
     repository: openg2p/openg2p-registry-staff-portal-ui
     tag: "1.1.1"
     pullPolicy: Always
@@ -975,9 +969,8 @@ celeryBeatProducer:
   nameOverride: celery-beat-producer
   replicaCount: 1
   image:
-    repository: openg2p/openg2p-registry-celery
-    tag: "0.0.0-develop.341"
-    PullSecrets: "dockerhub-openg2pbotreadony"
+    repository: asierneb/openg2p-vsss-celery
+    tag: "1.1.3"
     pullPolicy: Always
 
   # Celery Beat Producer is NOT just a scheduler in this chart — it also
@@ -994,8 +987,6 @@ celeryBeatProducer:
       memory: 256Mi
 
   envVars:
-    REGISTRY_EXTENSION_MODULE: '{{ .Values.global.registryExtensionModule }}'
-    PYTHONPATH: '/opt/vsss-ext'
     REGISTRY_CELERY_BEAT_DB_HOSTNAME: '{{ .Values.global.postgresqlHost }}'
     REGISTRY_CELERY_BEAT_DB_DBNAME: '{{ tpl .Values.global.registryDB $ }}'
     REGISTRY_CELERY_BEAT_DB_PORT: '{{ .Values.global.registryDBPort }}'
@@ -1014,7 +1005,7 @@ celeryBeatProducer:
     REGISTRY_CELERY_BEAT_OUTGEST_DATA_PUBLISH_BEAT_PRODUCER_FREQUENCY: 20
     REGISTRY_CELERY_BEAT_OUTGEST_TOPIC_REGISTER_BEAT_PRODUCER_FREQUENCY: 20
     REGISTRY_CELERY_BEAT_DEDUPLICATION_BEAT_PRODUCER_FREQUENCY: 30
-    CELERY_APP: "openg2p_registry_celery_beat.main.celery_app"
+    CELERY_APP: "openg2p_registry_celery_beat_producers.main.celery_app"
     CELERY_OPTS: "worker --beat --loglevel=info --schedule=/tmp/celery-beat-schedule.db"
 
   envVarsFrom:
@@ -1053,10 +1044,9 @@ celeryWorker:
   nameOverride: celery-worker
   replicaCount: 1
   image:
-    repository: openg2p/openg2p-registry-celery
-    tag: "0.0.0-develop.341"
+    repository: asierneb/openg2p-vsss-celery
+    tag: "1.1.3"
     pullPolicy: Always
-    PullSecrets: "dockerhub-openg2pbotreadony"
 
   # Celery Worker is the largest variable-load component in the chart. It
   # processes async tasks (bulk partner ingest, data transformation,
@@ -1074,8 +1064,6 @@ celeryWorker:
       memory: 768Mi
 
   envVars:
-    REGISTRY_EXTENSION_MODULE: '{{ .Values.global.registryExtensionModule }}'
-    PYTHONPATH: '/opt/vsss-ext'
     REGISTRY_CELERY_WORKERS_DB_HOSTNAME: '{{ .Values.global.postgresqlHost }}'
     REGISTRY_CELERY_WORKERS_DB_DBNAME: '{{ tpl .Values.global.registryDB $ }}'
     REGISTRY_CELERY_WORKERS_DB_PORT: 5432
@@ -1100,7 +1088,7 @@ celeryWorker:
     REGISTRY_CELERY_WORKERS_TEMPLATE_BUCKET_NAME: '{{ tpl .Values.global.templateBucketName $ }}'
     REGISTRY_CELERY_WORKERS_FUNCTIONAL_ID_GENERATION_URL: '{{ tpl .Values.global.idGeneratorInternalUrl $ }}'
     REGISTRY_CELERY_WORKERS_ID_GENERATION_ALLOCATION_PATH: '/idgenerator/{id_type}/id'
-    CELERY_APP: "openg2p_registry_celery_worker.main.celery_app"
+    CELERY_APP: "openg2p_registry_celery_workers.main.celery_app"
     CELERY_OPTS: "worker -Q registry_worker_queue --loglevel=info"
     REGISTRY_CORE_KEYCLOAK_TOKEN_URL: '{{ tpl .Values.global.keycloakIssuerUrl $ }}/protocol/openid-connect/token'
     REGISTRY_CORE_KEYCLOAK_CLIENT_ID: '{{ tpl .Values.global.authClientId $ }}'

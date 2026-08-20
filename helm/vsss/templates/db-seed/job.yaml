@@ -20,6 +20,10 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       restartPolicy: OnFailure
+      {{- with .Values.dbSeed.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       initContainers:
         # 1. Wait for PostgreSQL to be reachable
         - name: wait-for-db
@@ -83,7 +87,7 @@ spec:
               {{- end }}
       containers:
         - name: db-seed
-          image: {{ include "common.tplvalues.render" (dict "value" .Values.dbSeed.image.repository "context" $) }}:{{ .Values.dbSeed.image.tag }}
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.dbSeed.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.dbSeed.image.pullPolicy }}
           env:
             - name: PGHOST

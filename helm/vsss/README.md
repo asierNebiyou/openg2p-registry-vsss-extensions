@@ -37,7 +37,7 @@ Branch-name-equals-version convention:
 
 | Branch | `Chart.yaml.version` |
 |---|---|
-| `develop` | `0.0.0-develop` |
+| `develop` | `1.1.3` (aligned with NSR chart tag `1.1.3`) |
 | `1.0.0`   | `1.0.0` |
 | `1.1.0`   | `1.1.0` |
 | `1.1.1`   | `1.1.1` |
@@ -45,19 +45,33 @@ Branch-name-equals-version convention:
 
 ## Images
 
+NSR `helm/mowsa-nsr` at tag **1.1.3** uses baked GitLab images
+(`registry.gitlab.com/mowsa1/nsr/national-social-registry/{staff-api,partner-api,celery,db-seed,staff-ui}:1.1.3`
++ `image.pullSecrets: gitlab-registry`). VSSS has no GitLab project, so this
+chart uses **VSSS-baked Hub images at the same tag** — not NSR GitLab images
+and not OpenG2P platform `:develop`.
+
 | Component | Image |
 |---|---|
-| staffPortalApi | `openg2p/openg2p-registry-staff-api:0.0.0-develop.341` + VSSS extension (same base NSR pins) |
-| partnerApi | `openg2p/openg2p-registry-partner-api:0.0.0-develop.341` + VSSS extension |
+| staffPortalApi | `asierneb/openg2p-vsss-staff-portal-api:1.1.3` |
+| partnerApi | `asierneb/openg2p-vsss-partner-api:1.1.3` |
 | staffPortalUi | `openg2p/openg2p-registry-staff-portal-ui:1.1.1` |
-| celeryBeatProducer / celeryWorker | `openg2p/openg2p-registry-celery:0.0.0-develop.341` + VSSS extension |
-| dbSeed | `asierneb/openg2p-vsss-db-seed:develop` *(variant SQL; no OpenG2P VSSS seed image)* |
+| celeryBeatProducer / celeryWorker | `asierneb/openg2p-vsss-celery:1.1.3` |
+| dbSeed | `asierneb/openg2p-vsss-db-seed:1.1.3` |
 | connector (api/worker/beat/consumer) | `asierneb/openg2p-connector-service:nsr-slashfix-202605221435` |
 | connector UI | `asierneb/openg2p-connector-ui:nsr` |
 
-Staff / partner / celery use OpenG2P platform images. The VSSS Python
-package is pip-installed at pod start (`REGISTRY_EXTENSION_MODULE`).
-db-seed remains a variant image because it ships VSSS SQL/templates.
+Until CI publishes `:1.1.3` on Docker Hub, retag the existing `:1.1.2` builds:
+
+```bash
+for img in openg2p-vsss-staff-portal-api openg2p-vsss-partner-api openg2p-vsss-celery openg2p-vsss-db-seed; do
+  docker pull asierneb/${img}:1.1.2
+  docker tag asierneb/${img}:1.1.2 asierneb/${img}:1.1.3
+  docker push asierneb/${img}:1.1.3
+done
+```
+
+For GitLab-hosted images (same layout as NSR), see `values-gitlab.example.yaml`.
 
 ## ID Generator `idTypes`
 
