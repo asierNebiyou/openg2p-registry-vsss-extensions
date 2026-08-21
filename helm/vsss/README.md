@@ -88,15 +88,33 @@ idgenerator:
 
 ## Installing
 
+### Package for Rancher / offline install (required)
+
+Rancher installs from a `.tgz`. That archive **must** include `charts/`
+(subcharts). Packaging without `helm dependency build` fails with:
+
+```text
+found in Chart.yaml, but missing in charts/ directory:
+  common, postgres-init, redis, openg2p-id-generator, keycloak-init, openg2p-awe
+```
+
+That error happens **before** any pods (including db-seed) are created.
+
+```bash
+# from repo root — produces vsss-<version>.tgz with dependencies
+./helm/scripts/package.sh .
+# upload that .tgz to the Rancher catalog (do not zip the helm/vsss folder raw)
+```
+
 ### From this repo (dev / CI)
 
 ```bash
-cd helm/openg2p-vsss
+cd helm/vsss
 helm dependency build
-helm install vsss . \
-  --namespace vsss \
+helm install registry . \
+  --namespace dev \
   --create-namespace \
-  --set global.registryHostname=vsss.example.com
+  --set global.registryHostname=registry.dev.openg2p.org
 ```
 
 Component URLs are auto-computed from `global.registryHostname`
