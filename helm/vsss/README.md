@@ -21,5 +21,4 @@ helm install vsss ./helm/vsss \
 
 Images: `asierneb/openg2p-vsss-{staff-portal-api,partner-api,celery,db-seed}` on Docker Hub.
 Each image extends the matching `openg2p/openg2p-registry-*` base at the pinned
-`RP_VERSION` / chart dependency version. Staff UI stays the public
-`openg2p-registry-staff-ui` image from the subchart.
+`RP_VERSION` / chart dependency version.
