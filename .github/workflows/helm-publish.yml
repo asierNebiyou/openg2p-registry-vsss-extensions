@@ -1,8 +1,9 @@
 name: Publish Helm Charts
 
 # Package helm/vsss WITH `helm dep up` so Rancher / helm install get charts/
-# (common, postgres-init, redis, id-generator, keycloak-init, openg2p-awe).
-# Uploading a tgz built without deps fails before any pods (including db-seed).
+# (common, openg2p-registry). The registry subchart brings postgres-init, redis,
+# id-generator, and keycloak-init. Uploading a tgz built without deps fails
+# before any pods (including db-seed).
 
 on:
   push:

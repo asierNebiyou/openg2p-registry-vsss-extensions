@@ -5,38 +5,58 @@ from openg2p_registry_core.schemas import (
     G2PRegisterBaseSchema,
     G2PRegisterHistorySchema,
     G2PIntakeFormSchemaBase,
+    G2PGeoSchema,
+    G2PGeoHistorySchema,
 )
 
 
-class G2PRegisterSchemaVillage(G2PRegisterBaseSchema):
+class G2PRegisterSchemaVillage(G2PRegisterBaseSchema, G2PGeoSchema):
     model_config = ConfigDict(from_attributes=True)
 
-    village_code: Optional[str] = None
-    village_name: Optional[str] = None
-    region: Optional[str] = None
-    district: Optional[str] = None
-    subcounty: Optional[str] = None
-    parish: Optional[str] = None
-    chairperson_name: Optional[str] = None
-    chairperson_phone: Optional[str] = None
-    secretary_name: Optional[str] = None
-    treasurer_name: Optional[str] = None
+    name: Optional[str] = None
     household_count: Optional[int] = None
-    population_estimate: Optional[int] = None
-    grant_status: Optional[str] = None
-    sacco_name: Optional[str] = None
-    bank_name: Optional[str] = None
-    bank_account_number: Optional[str] = None
+    code: Optional[str] = None
+
+    ug_region_id: Optional[str] = None
+    ug_district_id: Optional[str] = None
+    ug_subcounty_id: Optional[str] = None
+    ug_parish_id: Optional[str] = None
+    village_id: Optional[str] = None
+    polling_station: Optional[str] = None
     gps_latitude: Optional[float] = None
     gps_longitude: Optional[float] = None
-    signed_grant_agreement: Optional[bool] = None
-    governance_records: Optional[str] = None
-    financial_management: Optional[str] = None
+
+    chairperson_name: Optional[str] = None
+    chairperson_phone: Optional[str] = None
+    treasurer_name: Optional[str] = None
+    treasurer_phone: Optional[str] = None
+    secretary_name: Optional[str] = None
+    secretary_phone: Optional[str] = None
 
 
 class G2PIntakeFormSchemaVillage(G2PIntakeFormSchemaBase, G2PRegisterSchemaVillage):
     model_config = ConfigDict(from_attributes=True)
 
 
-class G2PRegisterHistorySchemaVillage(G2PRegisterHistorySchema, G2PRegisterSchemaVillage):
+class G2PRegisterHistorySchemaVillage(G2PRegisterHistorySchema, G2PGeoHistorySchema):
     model_config = ConfigDict(from_attributes=True)
+
+    name: Optional[str] = None
+    household_count: Optional[int] = None
+    code: Optional[str] = None
+
+    ug_region_id: Optional[str] = None
+    ug_district_id: Optional[str] = None
+    ug_subcounty_id: Optional[str] = None
+    ug_parish_id: Optional[str] = None
+    village_id: Optional[str] = None
+    polling_station: Optional[str] = None
+    gps_latitude: Optional[float] = None
+    gps_longitude: Optional[float] = None
+
+    chairperson_name: Optional[str] = None
+    chairperson_phone: Optional[str] = None
+    treasurer_name: Optional[str] = None
+    treasurer_phone: Optional[str] = None
+    secretary_name: Optional[str] = None
+    secretary_phone: Optional[str] = None

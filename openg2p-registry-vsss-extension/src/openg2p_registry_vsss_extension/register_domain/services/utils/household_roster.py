@@ -5,7 +5,7 @@ from openg2p_registry_core.models import RecordStatusEnum
 from sqlalchemy import select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..domain_validation_utils import as_int, parse_date
+from ..domain_validation_utils import parse_date
 
 CHILDREN_U5_MAX_AGE = 4
 SCHOOL_AGE_MIN = 5
@@ -19,8 +19,6 @@ ROSTER_AFFECTING_FIELDS = frozenset(
         "link_internal_record_id",
         "record_status",
         "birth_date",
-        "estimated_age",
-        "residency_status",
     }
 )
 
@@ -28,12 +26,14 @@ GEO_HIERARCHY_FIELDS = frozenset(
     {
         "geo_lowest_level_value_id",
         "geo_code_hierarchy_json",
-        "address_descriptor",
-        "kebele_code",
-        "locality_ea_code",
+        "ug_region_id",
+        "ug_district_id",
+        "ug_subcounty_id",
+        "ug_parish_id",
+        "village_id",
+        "polling_station",
         "gps_latitude",
         "gps_longitude",
-        "gps_accuracy",
     }
 )
 
@@ -98,7 +98,7 @@ def resolve_member_age(member: dict, today: date | None = None) -> int | None:
     birth_date = parse_date(member.get("birth_date"))
     if birth_date is not None:
         return calculate_age(birth_date, today)
-    return as_int(member.get("estimated_age"))
+    return None
 
 
 def is_active_member(member: dict) -> bool:
@@ -153,13 +153,7 @@ def compute_household_roster_counts(
 
 
 def apply_household_roster_counts(household, aggregates: HouseholdRosterAggregates) -> None:
-    household.household_size_total = aggregates.size_total
-    household.household_size_adults = aggregates.size_adults
-    household.household_size_children_u5 = aggregates.size_children_u5
-    household.household_size_school_age = aggregates.size_school_age
-    household.household_size_elderly = aggregates.size_elderly
-    household.elderly_member_present = aggregates.elderly_member_present
-    household.overcrowding_indicator = aggregates.overcrowding_indicator
+    household.household_size = aggregates.size_total
 
 
 def household_geo_payload(household) -> dict:

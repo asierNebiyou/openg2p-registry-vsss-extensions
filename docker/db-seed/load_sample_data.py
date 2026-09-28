@@ -263,11 +263,6 @@ SUB_TABLES = [
         ["primary_livelihood", "secondary_livelihood", "employment_status", "coping_strategies_index", "mobile_phone_type"],
     ),
     (
-        "g2p_register_individual_livestock",
-        "individual_livestock.json",
-        ["livestock_species", "livestock_counts"],
-    ),
-    (
         "g2p_register_individual_land",
         "individual_land.json",
         ["land_access", "land_size", "productive_assets"],
@@ -297,11 +292,6 @@ SUB_TABLES = [
         ],
     ),
     (
-        "g2p_register_individual_programs",
-        "individual_programs.json",
-        ["program_name", "program_start_date", "program_exit_date"],
-    ),
-    (
         "g2p_register_household_assets",
         "household_assets.json",
         ["asset_type", "asset_category", "quantity", "size_value", "size_unit", "size_band", "details"],
@@ -321,11 +311,6 @@ SUB_TABLES = [
             "lighting_source",
             "cooking_fuel_type",
         ],
-    ),
-    (
-        "g2p_register_household_programs",
-        "household_programs.json",
-        ["program_name", "program_start_date", "program_exit_date"],
     ),
 ]
 

@@ -1,54 +1,39 @@
-# Example overlay when VSSS images are published to GitLab like NSR 1.1.3.
-# Replace PROJECT/PATH with your GitLab project (e.g. mowsa1/vsss/village-social-security-registry).
+# Example overlay when VSSS images are published to GitLab.
+# Replace PROJECT/PATH with your GitLab project.
+# Staff UI stays the public openg2p-registry-staff-ui image from the subchart.
 #
 # kubectl -n <ns> create secret docker-registry gitlab-registry \
 #   --docker-server=registry.gitlab.com \
 #   --docker-username='<deploy-token-user>' \
 #   --docker-password='<deploy-token>'
 
-dbSeed:
-  image:
-    repository: registry.gitlab.com/PROJECT/PATH/db-seed
-    tag: "1.1.3"
-    pullSecrets:
-      - name: gitlab-registry
+registry:
+  dbSeed:
+    image:
+      repository: registry.gitlab.com/PROJECT/PATH/db-seed
+      tag: "1.2.0"
+      imagePullSecrets: ["gitlab-registry"]
 
-staffPortalApi:
-  image:
-    registry: registry.gitlab.com
-    repository: PROJECT/PATH/staff-api
-    tag: "1.1.3"
-    pullSecrets:
-      - name: gitlab-registry
+  staffApi:
+    image:
+      repository: registry.gitlab.com/PROJECT/PATH/staff-api
+      tag: "1.2.0"
+      imagePullSecrets: ["gitlab-registry"]
 
-partnerApi:
-  image:
-    registry: registry.gitlab.com
-    repository: PROJECT/PATH/partner-api
-    tag: "1.1.3"
-    pullSecrets:
-      - name: gitlab-registry
+  partnerApi:
+    image:
+      repository: registry.gitlab.com/PROJECT/PATH/partner-api
+      tag: "1.2.0"
+      imagePullSecrets: ["gitlab-registry"]
 
-staffPortalUi:
-  image:
-    registry: registry.gitlab.com
-    repository: PROJECT/PATH/staff-ui
-    tag: "1.1.3"
-    pullSecrets:
-      - name: gitlab-registry
+  celeryBeat:
+    image:
+      repository: registry.gitlab.com/PROJECT/PATH/celery
+      tag: "1.2.0"
+      imagePullSecrets: ["gitlab-registry"]
 
-celeryBeatProducer:
-  image:
-    registry: registry.gitlab.com
-    repository: PROJECT/PATH/celery
-    tag: "1.1.3"
-    pullSecrets:
-      - name: gitlab-registry
-
-celeryWorker:
-  image:
-    registry: registry.gitlab.com
-    repository: PROJECT/PATH/celery
-    tag: "1.1.3"
-    pullSecrets:
-      - name: gitlab-registry
+  celeryWorker:
+    image:
+      repository: registry.gitlab.com/PROJECT/PATH/celery
+      tag: "1.2.0"
+      imagePullSecrets: ["gitlab-registry"]

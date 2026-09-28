@@ -1,37 +1,32 @@
 # Overlay for public Docker Hub images (no gitlab-registry secret).
-#
-# NSR 1.1.3 uses GitLab registry.gitlab.com/mowsa1/nsr/national-social-registry/*:1.1.3.
-# VSSS has no GitLab project; defaults in values.yaml already use these Hub tags.
+# Defaults in values.yaml already use these Hub tags. Nest overrides under
+# `registry.` because service images belong to the openg2p-registry subchart.
 
-dbSeed:
-  image:
-    repository: asierneb/openg2p-vsss-db-seed
-    tag: "1.1.3"
+registry:
+  dbSeed:
+    image:
+      repository: asierneb/openg2p-vsss-db-seed
+      tag: "1.2.0"
 
-staffPortalApi:
-  image:
-    repository: asierneb/openg2p-vsss-staff-portal-api
-    tag: "1.1.3"
+  staffApi:
+    image:
+      repository: asierneb/openg2p-vsss-staff-portal-api
+      tag: "1.2.0"
 
-partnerApi:
-  image:
-    repository: asierneb/openg2p-vsss-partner-api
-    tag: "1.1.3"
+  partnerApi:
+    image:
+      repository: asierneb/openg2p-vsss-partner-api
+      tag: "1.2.0"
 
-celeryBeatProducer:
-  image:
-    repository: asierneb/openg2p-vsss-celery
-    tag: "1.1.3"
+  celeryBeat:
+    image:
+      repository: asierneb/openg2p-vsss-celery
+      tag: "1.2.0"
 
-celeryWorker:
-  image:
-    repository: asierneb/openg2p-vsss-celery
-    tag: "1.1.3"
-
-staffPortalUi:
-  image:
-    repository: openg2p/openg2p-registry-staff-portal-ui
-    tag: "1.1.1"
+  celeryWorker:
+    image:
+      repository: asierneb/openg2p-vsss-celery
+      tag: "1.2.0"
 
 connector:
   image:

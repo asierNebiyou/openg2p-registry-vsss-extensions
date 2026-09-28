@@ -1,4 +1,7 @@
-# Staff Portal UI — built from registry-platform ui/staff-portal-ui @ REPO_URL/GIT_BRANCH.
+# Optional Staff Portal UI build from registry-platform ui/staff-portal-ui
+# @ REPO_URL/GIT_BRANCH. The VSSS Helm chart does not publish a custom UI
+# image; it uses the public openg2p-registry-staff-ui image from the
+# openg2p-registry subchart.
 FROM node:20-alpine AS base
 WORKDIR /app
 
