@@ -2,7 +2,7 @@
 
 Uganda **Village Savings & Support System (VSSS)** domain extension for OpenG2P Registry Gen2.
 
-Installs as the shared import package `openg2p_registry_extensions` (same remapping pattern as NSR). Only one domain extension can be installed at a time.
+Installs as `openg2p_registry_vsss_extension`. Runtime images select it with `REGISTRY_EXTENSION_MODULE`, which the platform aliases onto `openg2p_registry_extensions` at startup.
 
 ## Registers
 

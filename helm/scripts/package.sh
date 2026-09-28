@@ -2,7 +2,7 @@
 # Package the VSSS Helm chart WITH dependencies (required for Rancher / helm install).
 #
 # Bad packages (no charts/) fail with:
-#   found in Chart.yaml, but missing in charts/ directory: common, postgres-init, ...
+#   found in Chart.yaml, but missing in charts/ directory: common, openg2p-registry
 #
 # Usage:
 #   ./helm/scripts/package.sh              # writes ./vsss-<version>.tgz
@@ -26,7 +26,7 @@ helm package . -d "${OUT}"
 PKG="${OUT}/vsss-${VERSION}.tgz"
 echo "==> verifying charts/ inside package"
 missing=0
-for dep in common postgres-init redis openg2p-id-generator keycloak-init openg2p-awe; do
+for dep in common openg2p-registry; do
   if ! tar -tzf "${PKG}" | grep -q "/charts/${dep}"; then
     echo "ERROR: ${dep} missing from ${PKG}" >&2
     missing=1

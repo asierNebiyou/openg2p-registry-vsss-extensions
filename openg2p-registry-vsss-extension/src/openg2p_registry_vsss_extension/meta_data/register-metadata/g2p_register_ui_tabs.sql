@@ -22,34 +22,6 @@ VALUES
         'TRUE'
     ),
     (
-        'household_membership_tab',
-        '9055ab43-c85d-4833-bd00-ca657bb72644',
-        'household_membership_tab',
-        2,
-        'TRUE'
-    ),
-    (
-        'household_programs',
-        '9055ab43-c85d-4833-bd00-ca657bb72644',
-        'household_programs',
-        5,
-        'TRUE'
-    ),
-    (
-        'household_shocks',
-        '9055ab43-c85d-4833-bd00-ca657bb72644',
-        'household_shocks',
-        4,
-        'TRUE'
-    ),
-    (
-        'housing_services_tab',
-        '9055ab43-c85d-4833-bd00-ca657bb72644',
-        'housing_services_tab',
-        3,
-        'TRUE'
-    ),
-    (
         'individual_info_tab',
         'a1a4d25a-1cd4-4356-abac-985a0b3c6bcd',
         'individual_info',
@@ -59,28 +31,28 @@ VALUES
     (
         'individual_household_tab',
         'a1a4d25a-1cd4-4356-abac-985a0b3c6bcd',
-        'household',
+        'individual_household_tab',
         2,
         'TRUE'
     ),
     (
-        'individual_livelihood_tab',
-        'a1a4d25a-1cd4-4356-abac-985a0b3c6bcd',
-        'livelihood',
+        'household_members_tab',
+        '9055ab43-c85d-4833-bd00-ca657bb72644',
+        'household_members_tab',
+        2,
+        'TRUE'
+    ),
+    (
+        'household_village_tab',
+        '9055ab43-c85d-4833-bd00-ca657bb72644',
+        'household_village_tab',
         3,
         'TRUE'
     ),
     (
-        'individual_programs_tab',
-        'a1a4d25a-1cd4-4356-abac-985a0b3c6bcd',
-        'programs',
-        9,
-        'TRUE'
-    ),
-    (
-        'individual_vulnerability_tab',
-        'a1a4d25a-1cd4-4356-abac-985a0b3c6bcd',
-        'vulnerability',
-        5,
+        'village_households_tab',
+        'e7c8f2a1-4b5d-4e6f-9a0b-1c2d3e4f5a6b',
+        'village_households_tab',
+        2,
         'TRUE'
     );

@@ -2,19 +2,16 @@
 
 ## Overview
 
-The `docker/scripts/` folder provides a fully local, command-line equivalent
-of the `.github/workflows/docker-build-*.yml` GitHub Actions workflows.
-Running `build.sh` does exactly what the workflow does:
+The `docker/scripts/` folder builds the thin VSSS images locally.
 
 1. Reads a **service spec file** (e.g. `staff-portal-api/develop.txt`, path
-   relative to `docker/`)
-2. Parses the Docker image tag, git dependencies, and Dockerfile path
-3. Copies any **local-path deps** (e.g. `./openg2p-registry-vsss-extension`) into
-   `docker/local_deps/` so they are inside the Docker build context
-4. Generates `docker/adapters.requirements.txt` (consumed by the Dockerfiles)
-5. Runs `docker build` with `docker/` as the context, plus OCI labels
-   and `--build-arg` values
-6. Optionally pushes to Docker Hub
+   relative to `docker/`) for the image name and tag
+2. Runs `docker build` with the **repo root** as context, so the Dockerfile can
+   `COPY` `openg2p-registry-vsss-extension/`
+3. Optionally pushes to Docker Hub
+
+Each image extends `openg2p/openg2p-registry-*` at `RP_VERSION` (see the
+Dockerfiles). The extension is selected with `REGISTRY_EXTENSION_MODULE`.
 
 ---
 

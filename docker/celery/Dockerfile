@@ -1,25 +1,20 @@
-FROM python:3.12.11-alpine3.22
+# MGLSD Village Social Security System — Celery image (workers + beat).
+#
+# Thin extension of the registry-platform celery base image. Adds the VSSS
+# domain model and overlays run_celery.py with VSSS-specific worker patches
+# (partner auto-approve, AWE bearer-from-Keycloak, service registration).
+# CELERY_* ENV defaults are inherited from the base. A single image runs as
+# worker or beat, selected at runtime via CELERY_APP.
+#
+# Build context = repo root (so openg2p-registry-vsss-extension/ is reachable).
+ARG RP_VERSION=1.2.2-rc.509
+FROM openg2p/openg2p-registry-celery:${RP_VERSION}
 
-RUN apk add --no-cache --virtual .build-deps gcc libc-dev linux-headers make \
- && apk add --no-cache bash git gettext libpq-dev libffi-dev openssl-dev
+ENV REGISTRY_EXTENSION_MODULE=openg2p_registry_vsss_extension
 
-WORKDIR /app
+COPY openg2p-registry-vsss-extension/ /app/openg2p-registry-vsss-extension/
+RUN pip install --no-cache-dir /app/openg2p-registry-vsss-extension
 
-# Copy local package sources (may be empty for remote-only builds)
-COPY local_deps/ /app/local_deps/
+COPY docker/celery/run_celery.py /app/run_celery.py
 
-# Install dependencies from the generated requirements file
-COPY adapters.requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
-
-RUN apk del --no-network .build-deps
-
-ENV PYTHONUNBUFFERED=1
-ENV CELERY_APP=openg2p_registry_celery_worker.main.celery_app
-ENV CELERY_OPTS="worker --loglevel=info"
-ENV CELERY_IMPORTS=""
-
-COPY celery/run_celery.py /app/run_celery.py
-
-# Always use the python wrapper to handle imports and startup
 CMD ["python3", "/app/run_celery.py"]

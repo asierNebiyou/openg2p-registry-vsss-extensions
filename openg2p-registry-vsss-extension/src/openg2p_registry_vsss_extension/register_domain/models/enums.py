@@ -260,3 +260,42 @@ class GenderEnum(str, Enum):
     MALE = "MALE"
     FEMALE = "FEMALE"
     OTHERS = "OTHERS"
+
+
+class FinancialManagementEnum(str, Enum):
+    GOOD = "good"
+    FAIR = "fair"
+    POOR = "poor"
+
+
+class TrainingNeedsEnum(str, Enum):
+    FINANCIAL_LITERACY = "financial_literacy"
+    DIGITAL_TOOLS = "digital_tools"
+    ENTERPRISE_DEVELOPMENT = "enterprise_development"
+    RECORD_KEEPING = "record_keeping"
+    AGRICULTURE = "agriculture"
+    MARKETING = "marketing"
+    LEADERSHIP_GOVERNANCE = "leadership_governance"
+    NONE = "none"
+
+
+class LoanRequirementEnum(str, Enum):
+    WORKING_CAPITAL = "working_capital"
+    ASSET_FINANCING = "asset_financing"
+    EMERGENCY_LOAN = "emergency_loan"
+    AGRI_INPUT_LOAN = "agri_input_loan"
+    BUSINESS_EXPANSION = "business_expansion"
+    NOT_REQUIRED = "not_required"
+
+
+class AmountRequiredInEnum(str, Enum):
+    ONE_WEEK = "one_week"
+    FIFTEEN_DAYS = "fifteen_days"
+    ONE_MONTH = "one_month"
+
+
+class GrantStatusEnum(str, Enum):
+    NOT_STARTED = "not_started"
+    PARTIAL = "partial"
+    COMPLETED = "completed"
+    SUSPENDED = "suspended"

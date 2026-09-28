@@ -1,14 +1,12 @@
 import logging
 
 from openg2p_registry_core.services import G2PRegisterDomainService
-from openg2p_registry_core.schemas import ChangeRequestRequestPayload
 from openg2p_registry_core.models import G2PRegisterChangeRequest
 from openg2p_registry_core.models.enum import ChangeActionEnum
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .domain_validation_utils import as_bool, as_float, as_int, validation_error
+from .domain_validation_utils import as_int, validation_error
 from .utils.household_roster import (
     GEO_HIERARCHY_FIELDS,
     has_geo_affecting_changes,
@@ -23,41 +21,17 @@ class G2PRegisterDomainServiceHousehold(G2PRegisterDomainService):
     async def validate_domain_attributes(self, records: list[dict]):
         for record in records:
             self._validate_household_size(record)
-
+            self._validate_amount_required(record)
 
     def _validate_household_size(self, record: dict) -> None:
-        household_size_total = as_int(record.get("household_size_total"))
+        household_size = as_int(record.get("household_size"))
+        if household_size is not None and household_size < 0:
+            validation_error("Household size cannot be negative")
 
-        size_fields = {
-            "adults": as_int(record.get("household_size_adults")),
-            "children u5": as_int(record.get("household_size_children_u5")),
-            "school age": as_int(record.get("household_size_school_age")),
-            "elderly": as_int(record.get("household_size_elderly")),
-        }
-
-        if household_size_total is None:
-            return
-
-        for label, value in size_fields.items():
-            if value is not None and value > household_size_total:
-                validation_error(
-                    f"Household size {label} cannot exceed household size total"
-                )
-
-        if all(value is not None for value in size_fields.values()):
-            if sum(size_fields.values()) != household_size_total:
-                validation_error(
-                    "Household size total must equal the sum of household size "
-                    "adults, children u5, school age, and elderly"
-                )
-
-
-    def _validate_overcrowding(self, record: dict) -> None:
-        overcrowding = as_float(record.get("overcrowding_indicator"))
-        household_size_total = as_int(record.get("household_size_total"))
-        if overcrowding is not None and household_size_total is not None and overcrowding > household_size_total:
-            validation_error("Overcrowding Indicator must not exceed household size total")
-
+    def _validate_amount_required(self, record: dict) -> None:
+        amount_required = as_int(record.get("amount_required"))
+        if amount_required is not None and amount_required < 0:
+            validation_error("Amount required cannot be negative")
 
     async def pre_approve(self, change_request: G2PRegisterChangeRequest, session: AsyncSession):
         from openg2p_registry_core.models import G2PRegisterChangeRequestPayload
@@ -92,14 +66,16 @@ class G2PRegisterDomainServiceHousehold(G2PRegisterDomainService):
 
             await propagate_household_geo_to_members(session, household, geo_payload=merged_geo)
 
-
     def construct_search_text(self, payload: dict, extra: list[str] = None) -> str:
         _logger.info("Constructing search text for household")
 
         keys = [
+            "name",
             "functional_record_id",
-            "geo_code_hierarchy_json",
-            "application_reference"
+            "polling_station",
+            "bank_name",
+            "account_number",
+            "application_reference",
         ]
         search_text = []
         if extra:
@@ -114,11 +90,14 @@ class G2PRegisterDomainServiceHousehold(G2PRegisterDomainService):
 
         return " ".join(search_text).strip()
 
-
     def construct_intake_record_name(self, payload: dict, extra: list[str] = None) -> str:
         _logger.info("Constructing intake record name for household")
+        return self.construct_record_name(payload, extra)
 
-        keys = ["created_by", "application_reference"]
+    def construct_record_name(self, payload: dict, extra: list[str] = None) -> str:
+        _logger.info("Constructing record name for household")
+
+        keys = ["name"]
         record_name = []
         if extra:
             record_name.extend(str(item).strip() for item in extra if str(item).strip())
@@ -129,19 +108,3 @@ class G2PRegisterDomainServiceHousehold(G2PRegisterDomainService):
         )
 
         return " ".join(record_name).strip()
-
-
-    def construct_record_name(self, payload: dict, extra: list[str] = None) -> str:
-        _logger.info("Constructing record name for household")
-
-        keys = ["created_by", "application_reference"]
-        record_name = []
-        if extra:
-            record_name.extend(str(item).strip() for item in extra if str(item).strip())
-        record_name.extend(
-            str(payload.get(key) or "").strip()
-            for key in keys
-            if str(payload.get(key) or "").strip()
-        )
-
-        return " - ".join(record_name).strip()

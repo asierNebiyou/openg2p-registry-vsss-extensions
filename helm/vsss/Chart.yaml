@@ -1,21 +1,30 @@
 apiVersion: v2
 name: vsss
 description: |
-  OpenG2P Village Social Security System (VSSS) — a self-sufficient Helm chart for the
-  VSSS registry stack (staff portal API/UI, partner API, celery beat/worker,
-  db-seed, id-generator). Supplies VSSS-branded Docker images and VSSS-specific
-  ID-generator configuration.
+  OpenG2P Village Social Security System (VSSS) — a thin, branded package over
+  the shared openg2p-registry chart published by the registry platform.
+
+  This chart declares openg2p-registry as a pinned dependency and supplies the
+  VSSS values overlay (variant identity, hostname, VSSS-built images, seed
+  toggles, id types and the IAM tile name). VSSS also ships connector-stack
+  templates (ODK / WebSub ingestion) under templates/connector/ — the only
+  templates this chart owns. Everything else comes from the openg2p-registry
+  subchart.
 type: application
 
-version: 1.1.3
-appVersion: "1.1.3"
+# Version handling:
+#   This `version` is a STATIC placeholder — it is NOT the published version.
+#   The central CI pipeline (build-publish.yml -> openg2p-packaging @v1) derives
+#   the real version from git (one version per commit) and overrides it at
+#   publish time, in lockstep with the VSSS images this chart references.
+version: 1.2.0
+appVersion: "1.2.0"
 
 keywords:
   - openg2p
-  - social-registry
   - vsss
   - registry
-
+  - social-registry
 home: https://openg2p.org
 icon: https://openg2p.github.io/openg2p-helm/openg2p-logo.png
 sources:
@@ -24,31 +33,17 @@ maintainers:
   - name: OpenG2P
     email: info@openg2p.org
 
+# bitnami/common — required by templates/connector (tplvalues helpers). Also
+# pulled transitively by openg2p-registry; declaring it here makes the helpers
+# available to this parent chart's templates.
 dependencies:
   - name: common
     repository: https://openg2p.github.io/openg2p-helm
     version: 2.30.0
-  - name: postgres-init
-    version: 1.2.0
+  - name: openg2p-registry
+    alias: registry
+    version: 1.2.2-rc.509
     repository: https://openg2p.github.io/openg2p-helm
-    condition: postgres-init.enabled
-  - name: redis
-    version: 19.6.4
-    repository: https://openg2p.github.io/openg2p-helm
-    condition: redis.enabled
-  - name: openg2p-id-generator
-    alias: idgenerator
-    version: 1.0.0
-    repository: https://openg2p.github.io/openg2p-helm
-    condition: idgenerator.enabled
-  - name: keycloak-init
-    version: 1.1.1
-    repository: https://openg2p.github.io/openg2p-helm
-    condition: keycloak-init.enabled
-  - name: openg2p-awe
-    version: 1.1.0-develop
-    repository: https://openg2p.github.io/openg2p-helm
-    condition: openg2p-awe.enabled
 
 annotations:
   catalog.cattle.io/display-name: "OpenG2P VSSS"

@@ -12,24 +12,21 @@ def test_models_export_intake_form_classes():
     content = _read("register_domain/models/__init__.py")
     assert "G2PIntakeFormHousehold" in content
     assert "G2PIntakeFormIndividual" in content
-    assert "G2PIntakeFormIndividualProgram" in content
-    assert "G2PIntakeFormHouseholdAsset" in content
+    assert "G2PIntakeFormVillage" in content
 
 
 def test_schemas_export_intake_form_classes():
     content = _read("register_domain/schemas/__init__.py")
     assert "G2PIntakeFormSchemaHousehold" in content
     assert "G2PIntakeFormSchemaIndividual" in content
-    assert "G2PIntakeFormIndividualProgramSchema" in content
-    assert "G2PIntakeFormHouseholdAssetSchema" in content
+    assert "G2PIntakeFormSchemaVillage" in content
 
 
 def test_app_migration_includes_intake_form_tables():
     content = _read("app.py")
     assert "G2PIntakeFormHousehold.create_migrate()" in content
     assert "G2PIntakeFormIndividual.create_migrate()" in content
-    assert "G2PIntakeFormIndividualProgram.create_migrate()" in content
-    assert "G2PIntakeFormHouseholdAsset.create_migrate()" in content
+    assert "G2PIntakeFormVillage.create_migrate()" in content
 
 
 def test_pmt_service_is_exposed():

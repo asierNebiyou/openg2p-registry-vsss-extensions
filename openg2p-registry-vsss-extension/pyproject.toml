@@ -34,5 +34,8 @@ Repository = "https://github.com/OpenG2P/openg2p-registry-extension"
 [tool.hatch.version]
 path = "src/openg2p_registry_vsss_extension/__init__.py"
 
-[tool.hatch.build.targets.wheel.sources]
-"src/openg2p_registry_vsss_extension" = "openg2p_registry_extensions"
+# The package installs under its OWN import name (openg2p_registry_vsss_extension)
+# — there is no alias onto openg2p_registry_extensions. Each image selects the
+# domain model at runtime with REGISTRY_EXTENSION_MODULE, which the platform
+# entrypoints alias into sys.modules at startup. That lets this extension and the
+# platform's reference extension coexist in one image without colliding.

@@ -38,8 +38,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # docker/scripts → docker/ → repo root
 DOCKER_CTX="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PROJECT_ROOT="$(cd "${DOCKER_CTX}/.." && pwd)"
-# Alias retained for readability below. The Docker build context is docker/,
-# which is also where local_deps/ and adapters.requirements.txt live.
+# Spec files and generated adapters.requirements.txt still live under docker/.
+# Thin images build from the repo root so Dockerfiles can COPY the extension.
 REPO_ROOT="${DOCKER_CTX}"
 
 # ---------------------------------------------------------------------------
@@ -66,6 +66,7 @@ DEFAULT_SERVICES=(
   "staff-portal-api/develop.txt"
   "celery/develop.txt"
   "partner-api/develop.txt"
+  "db-seed/develop.txt"
 )
 
 # ---------------------------------------------------------------------------
@@ -197,7 +198,7 @@ for SERVICE_FILE in "${SERVICE_FILES[@]}"; do
 
   log "Image      : ${SVC_IMAGE}"
   log "Dockerfile : ${SVC_DOCKERFILE}"
-  log "Context    : ${SVC_CONTEXT}"
+  log "Context    : ${PROJECT_ROOT}"
   log "REPO_URL   : ${SVC_REPO_URL}"
   log "GIT_BRANCH : ${SVC_GIT_BRANCH}"
 
@@ -208,9 +209,11 @@ for SERVICE_FILE in "${SERVICE_FILES[@]}"; do
     echo "${LOCAL_PKGS}" | xargs -I{} basename {} | sed 's/^/    /'
   fi
 
-  log "Generated adapters.requirements.txt:"
-  cat "${REPO_ROOT}/adapters.requirements.txt"
-  echo ""
+  if [[ -f "${REPO_ROOT}/adapters.requirements.txt" ]]; then
+    log "Generated adapters.requirements.txt (unused by thin images):"
+    cat "${REPO_ROOT}/adapters.requirements.txt"
+    echo ""
+  fi
 
   # Build args
   BUILD_ARGS=(
@@ -236,7 +239,7 @@ for SERVICE_FILE in "${SERVICE_FILES[@]}"; do
         --platform "${BUILD_PLATFORM}" \
         "${BUILD_ARGS[@]}" \
         ${PUSH_FLAG} \
-        "${SVC_CONTEXT}"; then
+        "${PROJECT_ROOT}"; then
       log "✅ Build succeeded: ${SVC_IMAGE}"
     else
       err "❌ Build failed: ${SVC_IMAGE}"
@@ -248,7 +251,7 @@ for SERVICE_FILE in "${SERVICE_FILES[@]}"; do
     # (e.g. BUILD_PLATFORM=linux/amd64 on an Apple Silicon Mac — QEMU
     # emulation is triggered automatically by Docker Desktop).
     log "Running: docker build --platform ${BUILD_PLATFORM} ..."
-    if docker build --platform "${BUILD_PLATFORM}" "${BUILD_ARGS[@]}" "${SVC_CONTEXT}"; then
+    if docker build --platform "${BUILD_PLATFORM}" "${BUILD_ARGS[@]}" "${PROJECT_ROOT}"; then
       log "✅ Build succeeded: ${SVC_IMAGE}"
       extra_tags="${DOCKER_EXTRA_TAGS:-}"
       if [[ -n "${extra_tags}" ]]; then

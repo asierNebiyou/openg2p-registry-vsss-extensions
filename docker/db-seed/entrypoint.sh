@@ -2,24 +2,18 @@
 set -e
 
 # ──────────────────────────────────────────────────────────────
-# OpenG2P MGLSD Registry DB Seed Entrypoint
+# OpenG2P Registry DB Seed Entrypoint
 #
-# Meta-data SQL ships with the vsss-extension (register definitions, schemas,
-# tabs, sections, lookups, configs). Sample registrant data, sub-table data
-# and profile images come from openg2p-data (cloned into /openg2p-data at
-# image build time). Jinja templates ship under the extension's templates/
-# folder and are uploaded to MinIO with object key = filename
-# (= g2p_registry_documents.document_store_id).
-#
-# Expected environment variables:
-#   PGHOST, PGPORT (default 5432), PGDATABASE, PGUSER, PGPASSWORD
-#   LOAD_SAMPLE_DATA — "true" to load demography + VSSS sub-tables (default: false)
-#   LOAD_IMAGES      — "true" to upload profile images to MinIO (default: false)
-#   LOAD_TEMPLATES   — "true" to upload Jinja templates to MinIO (default: false)
-#   MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_SECURE
+# Registry database:
+#   PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD
+#   LOAD_SAMPLE_DATA — "true" to load sample data from openg2p-data (default: "false")
+#   LOAD_IMAGES      — "true" to upload profile images to MinIO (default: "false")
+#   LOAD_TEMPLATES   — "true" to upload templates to MinIO (default: "false")
+#   OPENG2P_DATA_DIR — cloned shared seed data (default: /openg2p-data)
+#   MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY — MinIO connection
+#   MINIO_SECURE     — "true" for HTTPS (default: "false")
 #   TEMPLATE_BUCKET_NAME, TEMPLATES_DIR — default bucket "templates" (DocumentBucket.TEMPLATES)
 #   IMAGE_BUCKET_NAME, IMAGES_DIR — default bucket "documents" (DocumentBucket.DOCUMENTS)
-#   OPENG2P_DATA_DIR (default "/openg2p-data")
 #
 # Master-data database (geo reference data; the master-data service is a generic
 # commons service and ships no seed data, so geo — which is registry sample /
@@ -28,20 +22,49 @@ set -e
 #   LOAD_GEO_DATA — "true" to load the geo hierarchy into master_data (default:
 #                   "false"). Enable alongside LOAD_SAMPLE_DATA so the geo ids the
 #                   registry rows derive already resolve in master_data.
+#
+# Country code lists (read from Master Data over HTTP, not SQL):
+#   LOAD_ATTRIBUTES   — "true" to copy the country's code lists from Master Data
+#                       into this registry's own attribute tables (default:
+#                       "false"). Requires the Master Data side to have been
+#                       installed with geoSeed.load.codelists enabled.
+#   MDS_BASE_URL      — e.g. http://master-data-master-data-api
+#   ATTRIBUTE_DOMAINS — comma-separated domain subtrees, e.g. "agriculture" for a
+#                       Farmer Registry. Empty loads the core lists only.
+#   SYNC_GEO_WIDGETS  — "true" to match the register's geo dropdowns to the
+#                       hierarchy Master Data actually holds (default: "false").
+#                       An extension's metadata hard-codes level names and depth;
+#                       a country whose pack disagrees gets empty dropdowns.
+#
+# AWE database (implementation extension data; optional):
+#   AWE_DB_SEED_ENABLED — "true" to seed the AWE Postgres database
+#   AWE_PGHOST, AWE_PGPORT, AWE_PGDATABASE, AWE_PGUSER, AWE_PGPASSWORD
+#   AWE_CALLBACK_HMAC_SECRET    — callback_secret row + registry staff API
+#   AWE_CALLBACK_SECRET_ID        — callback_secret row id (per-release; default "registry")
+#   AWE_CALLBACK_CALLER_SERVICE   — full webhook URL for callback_secret.caller_service
 # ──────────────────────────────────────────────────────────────
 
 PGPORT="${PGPORT:-5432}"
 LOAD_GEO_DATA="${LOAD_GEO_DATA:-false}"
+LOAD_ATTRIBUTES="${LOAD_ATTRIBUTES:-false}"
+SYNC_GEO_WIDGETS="${SYNC_GEO_WIDGETS:-false}"
 LOAD_SAMPLE_DATA="${LOAD_SAMPLE_DATA:-false}"
 LOAD_IMAGES="${LOAD_IMAGES:-false}"
 LOAD_TEMPLATES="${LOAD_TEMPLATES:-false}"
+AWE_DB_SEED_ENABLED="${AWE_DB_SEED_ENABLED:-false}"
 
 SEED_DIR="/seed"
 META_DATA_DIR="${SEED_DIR}/meta_data"
+AWE_META_DATA_DIR="${SEED_DIR}/awe_meta_data"
 
 run_sql_files() {
   dir="$1"
   label="$2"
+  db_host="${3:-$PGHOST}"
+  db_port="${4:-$PGPORT}"
+  db_name="${5:-$PGDATABASE}"
+  db_user="${6:-$PGUSER}"
+  db_password="${7:-$PGPASSWORD}"
 
   if [ ! -d "$dir" ]; then
     echo "[db-seed] No ${label} directory found at ${dir}, skipping."
@@ -54,51 +77,69 @@ run_sql_files() {
     return
   fi
 
-  echo "[db-seed] Running ${label} scripts from ${dir} ..."
+  echo "[db-seed] Running ${label} on ${db_name}@${db_host}:${db_port} ..."
+  PGHOST="$db_host" PGPORT="$db_port" PGDATABASE="$db_name" PGUSER="$db_user" PGPASSWORD="$db_password"
+  export PGHOST PGPORT PGDATABASE PGUSER PGPASSWORD
   for f in $sql_files; do
     echo "[db-seed]   -> $(basename "$f")"
     psql -v ON_ERROR_STOP=0 -f "$f"
   done
-  echo "[db-seed] ${label} scripts completed."
+  echo "[db-seed] ${label} completed."
+}
+
+run_callback_secret() {
+  tpl="${AWE_META_DATA_DIR}/40_callback_secret.sql.tpl"
+  if [ ! -f "$tpl" ]; then
+    return
+  fi
+  if [ -z "$AWE_CALLBACK_HMAC_SECRET" ]; then
+    echo "[db-seed] AWE_CALLBACK_HMAC_SECRET unset — skipping callback_secret."
+    return
+  fi
+  if [ -z "$AWE_CALLBACK_CALLER_SERVICE" ]; then
+    echo "[db-seed] AWE_CALLBACK_CALLER_SERVICE unset — skipping callback_secret."
+    return
+  fi
+  # Callback-secret row id — per registry instance. Passed by the db-seed Job
+  # from the chart's global.aweCallbackSecretId; defaults to "registry" so the
+  # image stays backward-compatible if the env is unset.
+  AWE_CALLBACK_SECRET_ID="${AWE_CALLBACK_SECRET_ID:-registry}"
+  echo "[db-seed]   -> callback_secret (AWE DB, from template) id=${AWE_CALLBACK_SECRET_ID} caller_service=${AWE_CALLBACK_CALLER_SERVICE}"
+  export AWE_CALLBACK_HMAC_SECRET AWE_CALLBACK_SECRET_ID AWE_CALLBACK_CALLER_SERVICE
+  PGHOST="${AWE_PGHOST}" PGPORT="${AWE_PGPORT:-5432}" PGDATABASE="${AWE_PGDATABASE}" \
+    PGUSER="${AWE_PGUSER}" PGPASSWORD="${AWE_PGPASSWORD}" \
+    envsubst '${AWE_CALLBACK_HMAC_SECRET} ${AWE_CALLBACK_SECRET_ID} ${AWE_CALLBACK_CALLER_SERVICE}' < "$tpl" | psql -v ON_ERROR_STOP=0 -f -
 }
 
 echo "============================================="
-echo " OpenG2P MGLSD Registry DB Seed"
-echo " Extension     : ${EXTENSION_FOLDER:-unknown}"
-echo " Database      : ${PGDATABASE}@${PGHOST}:${PGPORT}"
-echo " Master DB     : ${MD_PGDATABASE:-unset}@${MD_PGHOST:-unset}:${MD_PGPORT:-5432}"
-echo " Geo data      : ${LOAD_GEO_DATA}"
-echo " Sample data   : ${LOAD_SAMPLE_DATA}"
-echo " Images        : ${LOAD_IMAGES}"
-echo " Templates     : ${LOAD_TEMPLATES}"
+echo " OpenG2P Registry DB Seed"
+echo " Extension : ${EXTENSION_FOLDER:-unknown}"
+echo " Registry DB : ${PGDATABASE}@${PGHOST}:${PGPORT}"
+echo " Master DB   : ${MD_PGDATABASE:-unset}@${MD_PGHOST:-unset}:${MD_PGPORT:-5432}"
+echo " AWE DB seed : ${AWE_DB_SEED_ENABLED}"
+echo " Geo data    : ${LOAD_GEO_DATA}"
+echo " Code lists  : ${LOAD_ATTRIBUTES} (from ${MDS_BASE_URL:-unset})"
+echo " Sample data : ${LOAD_SAMPLE_DATA}"
+echo " Images      : ${LOAD_IMAGES}"
+echo " Templates   : ${LOAD_TEMPLATES}"
 echo "============================================="
 
-# 1. Meta-data SQL (always)
+# 1. Registry meta_data (includes awe-integration mappings under meta_data/)
 run_sql_files "$META_DATA_DIR" "meta-data"
 
-# 1b. Master-data SQL (incoming partner registrations for connector senders).
-# Runs against the shared master-data DB when MD_PG* creds are provided.
-# Uses per-invocation PG* overrides so the main PG* env stays untouched.
-MASTER_DATA_SEED_ENABLED="${MASTER_DATA_SEED_ENABLED:-false}"
+# 1b. VSSS — seed g2p_partners (and related) into the shared master_data DB so
+#     Partner API accepts connector sender ids (edrmc-websub, ud-sr-websub, odk-vsss).
+MASTER_DATA_SEED_ENABLED="${MASTER_DATA_SEED_ENABLED:-true}"
 MASTER_DATA_DIR="${SEED_DIR}/master_data"
-if [ "$MASTER_DATA_SEED_ENABLED" = "true" ] && [ -n "${MD_PGDATABASE:-}" ]; then
-  echo "[db-seed] Running master-data scripts against ${MD_PGDATABASE}@${MD_PGHOST:-$PGHOST} ..."
-  # Subshell so the PG* overrides don't leak into later steps.
-  (
-    export PGHOST="${MD_PGHOST:-$PGHOST}"
-    export PGPORT="${MD_PGPORT:-$PGPORT}"
-    export PGDATABASE="${MD_PGDATABASE}"
-    export PGUSER="${MD_PGUSER:-$PGUSER}"
-    export PGPASSWORD="${MD_PGPASSWORD:-$PGPASSWORD}"
-    run_sql_files "$MASTER_DATA_DIR" "master-data"
-  )
+if [ "$MASTER_DATA_SEED_ENABLED" = "true" ] && [ -n "${MD_PGDATABASE:-}" ] && [ -d "$MASTER_DATA_DIR" ]; then
+  run_sql_files "$MASTER_DATA_DIR" "master-data"     "${MD_PGHOST:-$PGHOST}" "${MD_PGPORT:-5432}" "$MD_PGDATABASE" "$MD_PGUSER" "$MD_PGPASSWORD"
 else
   echo "[db-seed] Skipping master-data seed (MASTER_DATA_SEED_ENABLED=${MASTER_DATA_SEED_ENABLED})."
 fi
 
-# 1c. Geo reference data into the master_data DB. Must run before sample data so
-#     the geo ids derived by load_sample_data.py already resolve in master_data.
-#     Opt-in: defaults OFF so existing environments are unchanged.
+
+# 2. Optionally load geo reference data into the master_data DB. Must run before
+#    sample data so the geo ids derived by load_sample_data.py already resolve.
 if [ "$LOAD_GEO_DATA" = "true" ]; then
   echo "[db-seed] Loading geo data into master_data ..."
   python3 /seed/load_geo_data.py
@@ -106,7 +147,27 @@ else
   echo "[db-seed] Skipping geo data (LOAD_GEO_DATA=${LOAD_GEO_DATA})."
 fi
 
-# 2. Sample data from openg2p-data JSON
+# 2b. Optionally copy the country's code lists from Master Data into this
+#     registry's own attribute tables. Runs AFTER meta_data so the extension's
+#     own fixture is in place first and the pack updates it rather than racing
+#     it, and BEFORE sample data so seeded records reference values that exist.
+if [ "$LOAD_ATTRIBUTES" = "true" ]; then
+  echo "[db-seed] Loading country code lists from Master Data ..."
+  python3 /seed/load_attributes_from_mds.py
+else
+  echo "[db-seed] Skipping code lists (LOAD_ATTRIBUTES=${LOAD_ATTRIBUTES})."
+fi
+
+# 2c. Optionally match the register's geo dropdowns to the loaded country. After
+#     meta_data, since it rewrites what meta_data just inserted.
+if [ "$SYNC_GEO_WIDGETS" = "true" ]; then
+  echo "[db-seed] Syncing geo widgets to the loaded country hierarchy ..."
+  python3 /seed/sync_geo_widgets.py
+else
+  echo "[db-seed] Skipping geo-widget sync (SYNC_GEO_WIDGETS=${SYNC_GEO_WIDGETS})."
+fi
+
+# 3. Optionally load sample data from openg2p-data (CSV + farmer sub-table JSON)
 if [ "$LOAD_SAMPLE_DATA" = "true" ]; then
   echo "[db-seed] Loading sample data from openg2p-data ..."
   python3 /seed/load_sample_data.py
@@ -114,7 +175,7 @@ else
   echo "[db-seed] Skipping sample data (LOAD_SAMPLE_DATA=${LOAD_SAMPLE_DATA})."
 fi
 
-# 3. Profile images to MinIO
+# 4. Optionally upload profile images to MinIO
 if [ "$LOAD_IMAGES" = "true" ]; then
   echo "[db-seed] Uploading profile images to MinIO ..."
   python3 /seed/upload_images.py
@@ -122,12 +183,26 @@ else
   echo "[db-seed] Skipping image upload (LOAD_IMAGES=${LOAD_IMAGES})."
 fi
 
-# 4. Jinja templates to MinIO
+# 5. Optionally upload Jinja templates to MinIO (object key = filename)
 if [ "$LOAD_TEMPLATES" = "true" ]; then
   echo "[db-seed] Uploading templates to MinIO ..."
   python3 /seed/upload_templates.py
 else
   echo "[db-seed] Skipping template upload (LOAD_TEMPLATES=${LOAD_TEMPLATES})."
+fi
+
+# 6. Optionally seed AWE database (policies, stages, callback_secret)
+if [ "$AWE_DB_SEED_ENABLED" = "true" ]; then
+  if [ -z "$AWE_PGDATABASE" ] || [ -z "$AWE_PGHOST" ]; then
+    echo "[db-seed] AWE_DB_SEED_ENABLED but AWE DB env incomplete — skipping AWE seed."
+  else
+    echo "---------------------------------------------"
+    echo " AWE DB : ${AWE_PGDATABASE}@${AWE_PGHOST}:${AWE_PGPORT:-5432}"
+    echo "---------------------------------------------"
+    run_sql_files "$AWE_META_DATA_DIR" "AWE meta_data" \
+      "$AWE_PGHOST" "${AWE_PGPORT:-5432}" "$AWE_PGDATABASE" "$AWE_PGUSER" "$AWE_PGPASSWORD"
+    run_callback_secret
+  fi
 fi
 
 echo "[db-seed] Done."
