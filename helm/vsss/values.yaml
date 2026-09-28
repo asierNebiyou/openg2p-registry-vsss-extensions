@@ -42,23 +42,23 @@ registry:
   staffApi:
     image:
       repository: natiabebaw12/openg2p-vsss-staff-portal-api
-      tag: 1.2.0
+      tag: develop
   partnerApi:
     image:
       repository: natiabebaw12/openg2p-vsss-partner-api
-      tag: 1.2.0
+      tag: develop
   celeryWorker:
     image:
       repository: natiabebaw12/openg2p-vsss-celery
-      tag: 1.2.0
+      tag: develop
   celeryBeat:
     image:
       repository: natiabebaw12/openg2p-vsss-celery
-      tag: 1.2.0
+      tag: develop
   dbSeed:
     image:
       repository: natiabebaw12/openg2p-vsss-db-seed
-      tag: 1.2.0
+      tag: develop
     # Meta_data seeds connector inbound rules that reference Jinja templates.
     loadGeoData: false
     loadSampleData: false
