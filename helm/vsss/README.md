@@ -19,6 +19,6 @@ helm install vsss ./helm/vsss \
   --set global.registryHostname=vsss.example.org
 ```
 
-Images: `asierneb/openg2p-vsss-{staff-portal-api,partner-api,celery,db-seed}` on Docker Hub.
+Images: `natiabebaw12/openg2p-vsss-{staff-portal-api,partner-api,celery,db-seed}` on Docker Hub.
 Each image extends the matching `openg2p/openg2p-registry-*` base at the pinned
 `RP_VERSION` / chart dependency version.

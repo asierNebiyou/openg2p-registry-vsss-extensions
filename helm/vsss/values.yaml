@@ -26,7 +26,7 @@ global:
 
   # Do NOT set global.imagePullSecrets — it is inherited by dependency
   # subcharts (e.g. idgenerator) and can break their templates. VSSS images
-  # are published under asierneb/ on Docker Hub, same as the connector images.
+  # are published under natiabebaw12/ on Docker Hub.
 
   # Connector — release-scoped DB / hostname for templates/connector/*
   connectorHostname: 'connector-{{ tpl .Values.global.registryHostname $ }}'
@@ -37,27 +37,27 @@ global:
 
 # ── openg2p-registry subchart overrides ───────────────────────────────────────
 registry:
-  # VSSS-built images are published to asierneb/ on Docker Hub. Staff UI stays
+  # VSSS-built images are published to natiabebaw12/ on Docker Hub. Staff UI stays
   # on the public openg2p-registry-staff-ui base image (subchart default).
   staffApi:
     image:
-      repository: asierneb/openg2p-vsss-staff-portal-api
+      repository: natiabebaw12/openg2p-vsss-staff-portal-api
       tag: 1.2.0
   partnerApi:
     image:
-      repository: asierneb/openg2p-vsss-partner-api
+      repository: natiabebaw12/openg2p-vsss-partner-api
       tag: 1.2.0
   celeryWorker:
     image:
-      repository: asierneb/openg2p-vsss-celery
+      repository: natiabebaw12/openg2p-vsss-celery
       tag: 1.2.0
   celeryBeat:
     image:
-      repository: asierneb/openg2p-vsss-celery
+      repository: natiabebaw12/openg2p-vsss-celery
       tag: 1.2.0
   dbSeed:
     image:
-      repository: asierneb/openg2p-vsss-db-seed
+      repository: natiabebaw12/openg2p-vsss-db-seed
       tag: 1.2.0
     # Meta_data seeds connector inbound rules that reference Jinja templates.
     loadGeoData: false
