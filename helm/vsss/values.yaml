@@ -25,13 +25,8 @@ global:
   registryHostname: '{{ .Release.Name }}.{{ .Release.Namespace }}.openg2p.org'
 
   # Do NOT set global.imagePullSecrets — it is inherited by dependency
-  # subcharts (e.g. idgenerator) and can break their templates. Set
-  # image.pullSecrets on each private Docker Hub image below instead.
-  # Create the secret in the install namespace before install/upgrade:
-  #   kubectl -n <ns> create secret docker-registry dockerhub-openg2pbotreadonly \
-  #     --docker-server=https://index.docker.io/v1/ \
-  #     --docker-username='<user>' \
-  #     --docker-password='<token>'
+  # subcharts (e.g. idgenerator) and can break their templates. VSSS images
+  # are published under asierneb/ on Docker Hub, same as the connector images.
 
   # Connector — release-scoped DB / hostname for templates/connector/*
   connectorHostname: 'connector-{{ tpl .Values.global.registryHostname $ }}'
@@ -42,8 +37,8 @@ global:
 
 # ── openg2p-registry subchart overrides ───────────────────────────────────────
 registry:
-  # VSSS-built images. Staff UI stays on the public openg2p-registry-staff-ui
-  # base image (subchart default).
+  # VSSS-built images are published to asierneb/ on Docker Hub. Staff UI stays
+  # on the public openg2p-registry-staff-ui base image (subchart default).
   staffApi:
     image:
       repository: asierneb/openg2p-vsss-staff-portal-api
@@ -130,10 +125,10 @@ connector:
   # from the openg2p-connector-service repo under the maintainer's registry;
   # switch to an openg2p/ repository once CI publishes one.
   image:
-    # OpenG2P has no connector image. asierneb has this tag (no vsss-* tag yet).
     repository: asierneb/openg2p-connector-service
     tag: nsr-slashfix-202605221435
     pullPolicy: Always
+    # String secret name (connector helper), not a list — leave empty for public Docker Hub.
     PullSecrets: ""
 
   commonEnv:
