@@ -31,4 +31,5 @@ VALUES
         'This form collects essential details of individual to help create an accurate and complete profile.',
         1,
         'False'
-    );
+    )
+ON CONFLICT DO NOTHING;

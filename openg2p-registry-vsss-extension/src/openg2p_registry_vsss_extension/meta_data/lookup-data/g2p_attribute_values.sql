@@ -32,7 +32,7 @@ INSERT INTO "public"."g2p_attribute_values" ("value_id","attribute_id","value_co
 ('GRANT_STATUS_PARTIAL','GRANT_STATUS','partial','Partial',NULL,'2'),
 ('GRANT_STATUS_COMPLETED','GRANT_STATUS','completed','Completed',NULL,'3'),
 ('GRANT_STATUS_SUSPENDED','GRANT_STATUS','suspended','Suspended',NULL,'4')
-ON CONFLICT (value_id, attribute_id) DO UPDATE
+ON CONFLICT (value_id) DO UPDATE
 SET attribute_id    = EXCLUDED.attribute_id,
     value_code      = EXCLUDED.value_code,
     value_display   = EXCLUDED.value_display,

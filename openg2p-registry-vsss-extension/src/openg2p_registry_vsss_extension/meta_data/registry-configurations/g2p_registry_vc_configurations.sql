@@ -15,4 +15,5 @@ VALUES
         '3116dd3a-1f81-46c3-b6a8-88f82fe5aae5',
         'vc-01',
         '{}'
-    );
+    )
+ON CONFLICT DO NOTHING;

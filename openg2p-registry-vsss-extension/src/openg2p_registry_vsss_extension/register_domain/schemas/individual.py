@@ -10,11 +10,6 @@ class G2PRegisterSchemaIndividual(G2PRegisterBaseSchema, G2PPersonSchema, G2PGeo
     additional_name: Optional[str] = None
     phone: Optional[str] = None
 
-    ug_region_id: Optional[str] = None
-    ug_district_id: Optional[str] = None
-    ug_subcounty_id: Optional[str] = None
-    ug_parish_id: Optional[str] = None
-    village_id: Optional[str] = None
     polling_station: Optional[str] = None
     gps_latitude: Optional[float] = None
     gps_longitude: Optional[float] = None
@@ -32,11 +27,6 @@ class G2PRegisterHistorySchemaIndividual(G2PRegisterHistorySchema, G2PPersonHist
     additional_name: Optional[str] = None
     phone: Optional[str] = None
 
-    ug_region_id: Optional[str] = None
-    ug_district_id: Optional[str] = None
-    ug_subcounty_id: Optional[str] = None
-    ug_parish_id: Optional[str] = None
-    village_id: Optional[str] = None
     polling_station: Optional[str] = None
     gps_latitude: Optional[float] = None
     gps_longitude: Optional[float] = None

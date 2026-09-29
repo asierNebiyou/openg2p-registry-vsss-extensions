@@ -153,4 +153,5 @@ VALUES
         'village_households_tab',
         'village_household_section',
         1
-    );
+    )
+ON CONFLICT DO NOTHING;

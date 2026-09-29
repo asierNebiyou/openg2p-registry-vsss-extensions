@@ -15,4 +15,5 @@ INSERT INTO "public"."registry_theme_values" ("theme_value_id","theme_id","attri
 ('d52deb5a-b131-46f2-93e5-c148bce4604c','75767b57-b388-4a12-aa52-8ab64a378cf8','neutral_color_2','#FFFFFF'),
 ('abe022e7-061b-4652-9c0b-f5506c538362','75767b57-b388-4a12-aa52-8ab64a378cf8','secondary_color_2','#E1E1E1'),
 ('a27d68ff-17a0-4b76-8be7-7ce47698262d','75767b57-b388-4a12-aa52-8ab64a378cf8','dashboard_image',''),
-('dbfff33e-bd5a-47a5-b0d9-ccdf37aae8f4','75767b57-b388-4a12-aa52-8ab64a378cf8','secondary_color_3','#585B59');
+('dbfff33e-bd5a-47a5-b0d9-ccdf37aae8f4','75767b57-b388-4a12-aa52-8ab64a378cf8','secondary_color_3','#585B59')
+ON CONFLICT DO NOTHING;
