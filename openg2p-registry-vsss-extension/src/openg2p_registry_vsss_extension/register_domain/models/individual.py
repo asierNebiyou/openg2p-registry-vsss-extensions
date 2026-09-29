@@ -19,12 +19,8 @@ class G2PRegisterIndividual(G2PRegister, G2PPerson, G2PGeo, G2PRegisterAuthentic
     additional_name: Mapped[str] = mapped_column(String, nullable=True)
     phone: Mapped[str] = mapped_column(String, nullable=True)
 
-    # Administrative Location
-    ug_region_id: Mapped[str] = mapped_column(String, nullable=True)
-    ug_district_id: Mapped[str] = mapped_column(String, nullable=True)
-    ug_subcounty_id: Mapped[str] = mapped_column(String, nullable=True)
-    ug_parish_id: Mapped[str] = mapped_column(String, nullable=True)
-    village_id: Mapped[str] = mapped_column(String, nullable=True)
+    # Administrative Location. Region through village come from master data
+    # via G2PGeo.geo_lowest_level_value_id and geo_code_hierarchy_json.
     polling_station: Mapped[str] = mapped_column(String, nullable=True)
     gps_latitude: Mapped[float] = mapped_column(Numeric, nullable=True)
     gps_longitude: Mapped[float] = mapped_column(Numeric, nullable=True)
@@ -51,11 +47,6 @@ class G2PIntakeFormIndividual(G2PIntakeForm, G2PRegister, G2PPerson, G2PGeo):
     additional_name: Mapped[str] = mapped_column(String, nullable=True)
     phone: Mapped[str] = mapped_column(String, nullable=True)
 
-    ug_region_id: Mapped[str] = mapped_column(String, nullable=True)
-    ug_district_id: Mapped[str] = mapped_column(String, nullable=True)
-    ug_subcounty_id: Mapped[str] = mapped_column(String, nullable=True)
-    ug_parish_id: Mapped[str] = mapped_column(String, nullable=True)
-    village_id: Mapped[str] = mapped_column(String, nullable=True)
     polling_station: Mapped[str] = mapped_column(String, nullable=True)
     gps_latitude: Mapped[float] = mapped_column(Numeric, nullable=True)
     gps_longitude: Mapped[float] = mapped_column(Numeric, nullable=True)
@@ -87,11 +78,6 @@ class G2PRegisterHistoryIndividual(G2PRegisterHistory, G2PPersonHistory, G2PGeoH
     additional_name: Mapped[str] = mapped_column(String, nullable=True)
     phone: Mapped[str] = mapped_column(String, nullable=True)
 
-    ug_region_id: Mapped[str] = mapped_column(String, nullable=True)
-    ug_district_id: Mapped[str] = mapped_column(String, nullable=True)
-    ug_subcounty_id: Mapped[str] = mapped_column(String, nullable=True)
-    ug_parish_id: Mapped[str] = mapped_column(String, nullable=True)
-    village_id: Mapped[str] = mapped_column(String, nullable=True)
     polling_station: Mapped[str] = mapped_column(String, nullable=True)
     gps_latitude: Mapped[float] = mapped_column(Numeric, nullable=True)
     gps_longitude: Mapped[float] = mapped_column(Numeric, nullable=True)

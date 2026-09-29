@@ -26,11 +26,6 @@ GEO_HIERARCHY_FIELDS = frozenset(
     {
         "geo_lowest_level_value_id",
         "geo_code_hierarchy_json",
-        "ug_region_id",
-        "ug_district_id",
-        "ug_subcounty_id",
-        "ug_parish_id",
-        "village_id",
         "polling_station",
         "gps_latitude",
         "gps_longitude",

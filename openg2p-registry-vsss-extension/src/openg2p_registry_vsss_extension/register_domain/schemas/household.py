@@ -14,11 +14,6 @@ class G2PRegisterSchemaHousehold(G2PRegisterBaseSchema, G2PGeoSchema):
     name: Optional[str] = None
     household_size: Optional[int] = None
 
-    ug_region_id: Optional[str] = None
-    ug_district_id: Optional[str] = None
-    ug_subcounty_id: Optional[str] = None
-    ug_parish_id: Optional[str] = None
-    village_id: Optional[str] = None
     polling_station: Optional[str] = None
     gps_latitude: Optional[float] = None
     gps_longitude: Optional[float] = None
@@ -50,11 +45,6 @@ class G2PRegisterHistorySchemaHousehold(G2PRegisterHistorySchema, G2PGeoHistoryS
     name: Optional[str] = None
     household_size: Optional[int] = None
 
-    ug_region_id: Optional[str] = None
-    ug_district_id: Optional[str] = None
-    ug_subcounty_id: Optional[str] = None
-    ug_parish_id: Optional[str] = None
-    village_id: Optional[str] = None
     polling_station: Optional[str] = None
     gps_latitude: Optional[float] = None
     gps_longitude: Optional[float] = None
