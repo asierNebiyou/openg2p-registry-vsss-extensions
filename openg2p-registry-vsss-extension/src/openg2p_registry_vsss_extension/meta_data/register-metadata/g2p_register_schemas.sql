@@ -29,4 +29,5 @@ VALUES
     'null',
     'null',
     'null'
-  );
+  )
+ON CONFLICT DO NOTHING;

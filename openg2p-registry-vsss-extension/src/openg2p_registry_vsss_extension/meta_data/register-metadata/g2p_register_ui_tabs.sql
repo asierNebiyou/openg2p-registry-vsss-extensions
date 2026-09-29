@@ -55,4 +55,5 @@ VALUES
         'village_households_tab',
         2,
         'TRUE'
-    );
+    )
+ON CONFLICT DO NOTHING;

@@ -11,4 +11,5 @@ VALUES
         'Household',
         'PMT_SCORE',
         'True'
-    );
+    )
+ON CONFLICT DO NOTHING;

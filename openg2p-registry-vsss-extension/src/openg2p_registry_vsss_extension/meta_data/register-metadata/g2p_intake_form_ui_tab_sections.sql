@@ -113,4 +113,5 @@ VALUES
         'village_intake_tab',
         'village_attachment_section',
         5
-    );
+    )
+ON CONFLICT DO NOTHING;

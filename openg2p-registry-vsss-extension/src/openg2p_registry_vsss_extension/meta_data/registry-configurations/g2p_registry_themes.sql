@@ -14,4 +14,5 @@ VALUES
         '75767b57-b388-4a12-aa52-8ab64a378cf8',
         'VSSS-theme',
         'False'
-    );
+    )
+ON CONFLICT DO NOTHING;

@@ -29,4 +29,5 @@ VALUES
         '9055ab43-c85d-4833-bd00-ca657bb72644',
         'VERIFIABLE_CREDENTIAL',
         'VC'
-    );
+    )
+ON CONFLICT DO NOTHING;

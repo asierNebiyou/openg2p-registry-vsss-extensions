@@ -373,4 +373,5 @@ VALUES
     'FALSE',
     'FALSE',
     'FALSE'
-  );
+  )
+ON CONFLICT DO NOTHING;
