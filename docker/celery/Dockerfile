@@ -12,17 +12,13 @@ FROM openg2p/openg2p-registry-celery:${RP_VERSION}
 ENV REGISTRY_EXTENSION_MODULE=openg2p_registry_vsss_extension
 
 COPY openg2p-registry-vsss-extension/ /app/vsss-extension/
-# --no-deps is deliberate. The base image already carries the whole runtime the
-# platform itself runs on (openg2p-fastapi-common, openg2p-g2pconnect-common-lib,
-# sqlalchemy, pydantic, the DB driver), and it has no compiler: the platform
-# Dockerfile installs gcc/libc-dev as a virtual .build-deps package and runs
-# `apk del` before the image is published. The fat build this image replaced did
-# its pip install WHILE those build deps were present, so a transitive dependency
-# with no musllinux wheel could still compile. Here it cannot, and pip fails with
-# "command 'gcc' failed: No such file or directory ... likely not a problem with
-# pip". Installing only this package avoids resolving transitive deps that the
-# base image already satisfies.
-RUN pip install --no-cache-dir --no-deps /app/vsss-extension
+# Install the domain package. See docker/install-extension.sh for why this is
+# not a bare `pip install`: the base image has no compiler, so the extension is
+# installed with --no-deps and the script then asserts the base actually
+# satisfies it, falling back to a full install with temporary build tooling.
+COPY docker/install-extension.sh /usr/local/bin/install-extension.sh
+RUN /usr/local/bin/install-extension.sh /app/vsss-extension \
+ && rm /usr/local/bin/install-extension.sh
 
 COPY docker/celery/run_celery.py /app/run_celery.py
 
