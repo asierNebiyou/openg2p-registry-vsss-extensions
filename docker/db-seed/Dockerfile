@@ -27,6 +27,13 @@ COPY openg2p-registry-vsss-extension/src/openg2p_registry_vsss_extension/awe_met
 COPY openg2p-registry-vsss-extension/src/openg2p_registry_vsss_extension/templates/      /seed/templates/
 COPY docker/db-seed/seed-data/                                                           /seed/seed-data/
 
+# Seed deps (minio, for the MinIO uploads). Installed explicitly rather than
+# relying on the base image, so the VSSS upload scripts cannot break if a base
+# image drops them.
+COPY docker/db-seed/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir --break-system-packages -r /tmp/requirements.txt \
+ && rm /tmp/requirements.txt
+
 # VSSS domain-specific loaders + entrypoint (AWE seed step).
 COPY docker/db-seed/load_sample_data.py  /seed/load_sample_data.py
 COPY docker/db-seed/load_geo_data.py     /seed/load_geo_data.py

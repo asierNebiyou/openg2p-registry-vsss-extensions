@@ -1,0 +1,20 @@
+# Python deps for the db-seed step.
+#
+# Needed on TWO paths, which is why this file exists even though the image is
+# now a thin layer over openg2p/openg2p-registry-db-seed:
+#
+#   * the container — the Dockerfile pip-installs this, so the VSSS upload
+#     scripts work regardless of what the base image happens to ship;
+#   * native local dev — openg2p-developer's install-registry-db-seed.sh builds
+#     a venv from this file (scripts/install-python-project.sh). Without it that
+#     script falls back to a minimal venv with psycopg2-binary only, and
+#     `make vsss-registry-seed` fails on
+#     `ModuleNotFoundError: No module named 'minio'` as soon as
+#     LOAD_TEMPLATES or LOAD_IMAGES is on.
+#
+# upload_templates.py and upload_images.py import minio; load_sample_data.py and
+# load_geo_data.py import psycopg2. psycopg2 is NOT listed here: the base image
+# provides it, and for native dev install-registry-db-seed.sh installs
+# psycopg2-binary (there is no psycopg2 wheel for musl, so pip would try to
+# compile it).
+minio==7.2.15
