@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openg2p-registry-vsss-extension"
-description = "OpenG2P Registry VSSS Extension (Uganda)"
+description = "MGLSD Village Social Security System (VSSS) extension for the OpenG2P registry platform"
 readme = "README.md"
 requires-python = ">=3.7"
 license = { text = "MPL-2.0" }
@@ -22,6 +22,8 @@ classifiers = [
 dependencies = [
   "openg2p-fastapi-common >=1.1.2",
   "openg2p-g2pconnect-common-lib >=1.1.0",
+  "greenlet",
+  "psycopg[binary]",
 ]
 
 dynamic = ["version"]
@@ -29,10 +31,21 @@ dynamic = ["version"]
 [project.urls]
 Homepage = "https://openg2p.org"
 Documentation = "https://docs.openg2p.org/"
-Repository = "https://github.com/OpenG2P/openg2p-registry-extension"
+Repository = "https://github.com/OpenG2P/openg2p-registry-vsss-extensions"
 
 [tool.hatch.version]
 path = "src/openg2p_registry_vsss_extension/__init__.py"
 
-[tool.hatch.build.targets.wheel.sources]
-"src/openg2p_registry_vsss_extension" = "openg2p_registry_extensions"
+# The package installs under its OWN import name (openg2p_registry_vsss_extension)
+# — there is no alias onto openg2p_registry_extensions. Each image selects the
+# domain model at runtime with REGISTRY_EXTENSION_MODULE, which the platform
+# entrypoints alias into sys.modules at startup. That lets this extension and the
+# platform's reference extension coexist in one image without colliding.
+#
+# The removed remap was:
+#   [tool.hatch.build.targets.wheel.sources]
+#   "src/openg2p_registry_vsss_extension" = "openg2p_registry_extensions"
+# which installed the package as `openg2p_registry_extensions`. Under the
+# inverted build model the Dockerfiles set
+# REGISTRY_EXTENSION_MODULE=openg2p_registry_vsss_extension, so the remap made
+# that module unimportable at runtime.

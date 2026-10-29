@@ -14,10 +14,6 @@ class G2PRegisterSchemaHousehold(G2PRegisterBaseSchema, G2PGeoSchema):
     household_head_person_id: Optional[str] = None
     headship_type: Optional[HeadshipTypeEnum] = None
     household_assets: Optional[list[HouseholdAssetsEnum]] = None
-    # region_code: Optional[str] = None
-    # zone_subcity_code: Optional[str] = None
-    # woreda_code: Optional[str] = None
-    kebele_code: Optional[str] = None
     locality_ea_code: Optional[str] = None
     address_descriptor: Optional[str] = None
 
@@ -64,10 +60,6 @@ class G2PRegisterHistorySchemaHousehold(G2PRegisterHistorySchema, G2PGeoHistoryS
     household_head_person_id: Optional[str] = None
     headship_type: Optional[HeadshipTypeEnum] = None
     household_assets: Optional[list[HouseholdAssetsEnum]] = None
-    # region_code: Optional[str] = None
-    # zone_subcity_code: Optional[str] = None
-    # woreda_code: Optional[str] = None
-    kebele_code: Optional[str] = None
     locality_ea_code: Optional[str] = None
     address_descriptor: Optional[str] = None
 

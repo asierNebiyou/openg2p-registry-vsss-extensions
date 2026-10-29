@@ -1,3 +1,14 @@
+-- Data models VSSS accepts records under.
+--
+-- Only the generic import paths remain. The inbound connector surface this
+-- extension inherited from the MoWSA NSR lineage has been removed: the
+-- edrmc_websub / ud_websub WebSub models pointed at Ethiopian endpoints
+-- (websub.hrp.edrmc.gov.et, websub.ud.mowsa.gov.et), and nsr_v11_data_model /
+-- nsr_edrmc_data_model carried NSR's Ethiopian payload shape (woreda / zone /
+-- kebele). None of it applies to a Uganda VSSS deployment.
+--
+-- Add a VSSS-specific data model here, with matching key paths, semantic
+-- patterns and incoming templates, when a real inbound source exists.
 INSERT INTO
     "public"."data_models" (
         "data_model_id",
@@ -19,27 +30,6 @@ VALUES
         'Import-CSV',
         '*',
         NULL,
-        'True'
-    ),
-    (
-        'a38d1cbd-88a3-4ffd-9cc9-ccb69148d489',
-        'test',
-        '$.body.header.message_id=>^$',
-        '283c29fe-c762-4e5d-a90d-0124d194cd98',
-        'True'
-    ),
-    (
-        'nsr_edrmc_data_model',
-        'nsr_registration_edrmc',
-        '$.body.header.message_id=>^.+$',
-        NULL,
-        'True'
-    ),
-    (
-        'nsr_v11_data_model',
-        'NSR_REGISTRATION_V11',
-        '$.body.header.message_id=>^.+$',
-        '56619678-0cad-4eb1-924e-6e74fb20291f',
         'True'
     )
 ON CONFLICT DO NOTHING;

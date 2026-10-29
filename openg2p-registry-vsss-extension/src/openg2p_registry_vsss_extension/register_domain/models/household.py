@@ -24,7 +24,6 @@ class G2PRegisterHousehold(G2PRegister, G2PGeo):
     household_head_person_id: Mapped[str] = mapped_column(String, nullable=True)
     headship_type: Mapped[HeadshipTypeEnum] = mapped_column(String, nullable=True)
     household_assets: Mapped[list[HouseholdAssetsEnum]] = mapped_column(JSONB, nullable=True)
-    kebele_code: Mapped[str] = mapped_column(String, nullable=True)
     locality_ea_code: Mapped[str] = mapped_column(String, nullable=True)
     address_descriptor: Mapped[str] = mapped_column(String, nullable=True)
 
@@ -83,7 +82,6 @@ class G2PIntakeFormHousehold(G2PIntakeForm, G2PRegister, G2PGeo):
     household_head_person_id: Mapped[str] = mapped_column(String, nullable=True)
     headship_type: Mapped[HeadshipTypeEnum] = mapped_column(String, nullable=True)
     household_assets: Mapped[list[HouseholdAssetsEnum]] = mapped_column(JSONB, nullable=True)
-    kebele_code: Mapped[str] = mapped_column(String, nullable=True)
     locality_ea_code: Mapped[str] = mapped_column(String, nullable=True)
     address_descriptor: Mapped[str] = mapped_column(String, nullable=True)
 
@@ -143,7 +141,6 @@ class G2PRegisterHistoryHousehold(G2PRegisterHistory, G2PGeoHistory):
     household_head_person_id: Mapped[str] = mapped_column(String, nullable=True)
     headship_type: Mapped[HeadshipTypeEnum] = mapped_column(String, nullable=True)
     household_assets: Mapped[list[HouseholdAssetsEnum]] = mapped_column(JSONB, nullable=True)
-    kebele_code: Mapped[str] = mapped_column(String, nullable=True)
     locality_ea_code: Mapped[str] = mapped_column(String, nullable=True)
     address_descriptor: Mapped[str] = mapped_column(String, nullable=True)
 

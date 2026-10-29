@@ -26,7 +26,7 @@ class RelationshipToHeadEnum(str, Enum):
 class PreferredContactMethodEnum(str, Enum):
     CALL = "CALL"
     SMS = "SMS"
-    THROUGH_KEBELE = "THROUGH_KEBELE"
+    THROUGH_VILLAGE_CHAIRPERSON = "THROUGH_VILLAGE_CHAIRPERSON"
 
 
 class CitizenshipCategoryEnum(str, Enum):

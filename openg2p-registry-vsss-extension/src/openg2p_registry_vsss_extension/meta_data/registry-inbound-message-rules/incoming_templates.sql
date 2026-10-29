@@ -1,3 +1,7 @@
+-- Transformation template bound to the generic JSON-L import path.
+--
+-- The nsr_edrmc_* and nsr_v11_* template bindings that used to sit here were
+-- removed with the rest of the NSR-inherited inbound surface.
 INSERT INTO
     "public"."incoming_templates" (
         "template_id",
@@ -17,41 +21,5 @@ VALUES
         'False',
         '2026-05-13 05:50:00.260793',
         NULL
-    ),
-    (
-        'nsr_edrmc_household_template',
-        '9055ab43-c85d-4833-bd00-ca657bb72644',
-        'nsr_edrmc_data_model',
-        'eb3e2450-11af-57da-9b77-1f49d8a1f4c2',
-        'False',
-        '2026-05-06 11:32:37.662558',
-        '2026-05-06 11:49:28.514495'
-    ),
-    (
-        'nsr_edrmc_individual_template',
-        'a1a4d25a-1cd4-4356-abac-985a0b3c6bcd',
-        'nsr_edrmc_data_model',
-        'eb3e2450-11af-57da-9b77-1f49d8a1f4c2',
-        'False',
-        '2026-05-06 11:32:37.662558',
-        '2026-05-06 11:49:28.514495'
-    ),
-    (
-        'nsr_v11_household_template',
-        '9055ab43-c85d-4833-bd00-ca657bb72644',
-        'nsr_v11_data_model',
-        '49cdd4aa-459f-51f3-b50c-cdc3e2559967',
-        'False',
-        '2026-04-30 09:53:08.47819',
-        '2026-04-30 17:47:14.899648'
-    ),
-    (
-        'nsr_v11_individual_template',
-        'a1a4d25a-1cd4-4356-abac-985a0b3c6bcd',
-        'nsr_v11_data_model',
-        '59a8f5f9-7fd0-5631-84a9-f6c2b6113bd5',
-        'False',
-        '2026-04-30 09:53:08.47819',
-        '2026-04-30 17:47:14.899648'
     )
 ON CONFLICT DO NOTHING;

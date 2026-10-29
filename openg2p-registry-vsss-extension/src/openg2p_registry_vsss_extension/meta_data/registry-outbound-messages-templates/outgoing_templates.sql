@@ -1,0 +1,2 @@
+-- Outbound message templates. Intentionally empty: VSSS publishes no outbound
+-- feed. (The MoWSA NSR lineage left this empty too.)

@@ -1,0 +1,17 @@
+variant: vsss
+label: MGLSD Village Social Security System
+product_repo: openg2p-registry-vsss-extensions
+extension_dir: openg2p-registry-vsss-extension
+python_module: openg2p_registry_vsss_extension
+pip_name: openg2p-registry-vsss-extension
+variant_token: vsss
+registry_db: vsss_registry_db
+master_data_db: vsss_master_data_db
+staff_api_port: 8021
+ui_port: 3020
+worker_queue: vsss_registry_worker_queue
+keycloak_client_id: vsss-staff-portal
+ui_app_mnemonic: vsss-staff-portal
+helm_chart: vsss
+country_pack: UGA
+pack_load: geo,codelists,samples

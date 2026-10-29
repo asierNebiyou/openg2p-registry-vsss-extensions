@@ -18,7 +18,7 @@ class G2PRegisterSchemaIndividual(G2PRegisterBaseSchema, G2PPersonSchema, G2PGeo
     gender: Optional[GenderEnum] = None
 
     address_descriptor: Optional[str] = None
-    kebele_code: Optional[str] = None
+    village_code: Optional[str] = None
     locality_ea_code: Optional[str] = None
     gps_latitude: Optional[float] = None
     gps_longitude: Optional[float] = None
@@ -74,7 +74,7 @@ class G2PRegisterHistorySchemaIndividual(G2PRegisterHistorySchema, G2PPersonHist
     full_name: Optional[str] = None
     gender: Optional[GenderEnum] = None
     address_descriptor: Optional[str] = None
-    kebele_code: Optional[str] = None
+    village_code: Optional[str] = None
     locality_ea_code: Optional[str] = None
     gps_latitude: Optional[float] = None
     gps_longitude: Optional[float] = None

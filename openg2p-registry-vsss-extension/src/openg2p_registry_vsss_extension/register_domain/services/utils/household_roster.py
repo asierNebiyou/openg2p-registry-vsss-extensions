@@ -29,7 +29,7 @@ GEO_HIERARCHY_FIELDS = frozenset(
         "geo_lowest_level_value_id",
         "geo_code_hierarchy_json",
         "address_descriptor",
-        "kebele_code",
+        "village_code",
         "locality_ea_code",
         "gps_latitude",
         "gps_longitude",

@@ -5,16 +5,43 @@ from types import ModuleType
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1] / "src" / "openg2p_registry_nsr_extension"
+ROOT = Path(__file__).resolve().parents[1] / "src" / "openg2p_registry_vsss_extension"
 sys.path.insert(0, str(ROOT.parent))
 
-import openg2p_registry_nsr_extension
+import openg2p_registry_vsss_extension
 
-sys.modules.setdefault("openg2p_registry_extensions", openg2p_registry_nsr_extension)
+sys.modules.setdefault("openg2p_registry_extensions", openg2p_registry_vsss_extension)
+
+# Stub the slice of the registry platform these services import, so the suite
+# runs without the platform installed (CI installs only this extension).
+mock_core = ModuleType("openg2p_registry_core")
+sys.modules.setdefault("openg2p_registry_core", mock_core)
 
 mock_core_services = ModuleType("openg2p_registry_core.services")
 mock_core_services.G2PRegisterDomainService = type("G2PRegisterDomainService", (), {})
 sys.modules["openg2p_registry_core.services"] = mock_core_services
+mock_core.services = mock_core_services
+
+# domain_validation_utils imports these; without the stub collection fails with
+# ModuleNotFoundError: No module named 'openg2p_registry_core'.
+mock_core_errors = ModuleType("openg2p_registry_core.errors")
+
+
+class G2PRegistryException(Exception):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.kwargs = kwargs
+
+
+class _ErrorCode:
+    def __getattr__(self, name):
+        return name
+
+
+mock_core_errors.G2PRegistryException = G2PRegistryException
+mock_core_errors.G2PRegistryErrorCodes = _ErrorCode()
+sys.modules["openg2p_registry_core.errors"] = mock_core_errors
+mock_core.errors = mock_core_errors
 
 domain_utils_mod = importlib.util.spec_from_file_location(
     "domain_validation_utils",
@@ -24,28 +51,28 @@ domain_utils_module = importlib.util.module_from_spec(domain_utils_mod)
 assert domain_utils_mod.loader is not None
 domain_utils_mod.loader.exec_module(domain_utils_module)
 sys.modules[
-    "openg2p_registry_nsr_extension.register_domain.services.domain_validation_utils"
+    "openg2p_registry_vsss_extension.register_domain.services.domain_validation_utils"
 ] = domain_utils_module
 
-register_domain_pkg = ModuleType("openg2p_registry_nsr_extension.register_domain")
-register_domain_pkg.services = ModuleType("openg2p_registry_nsr_extension.register_domain.services")
-register_domain_pkg.models = ModuleType("openg2p_registry_nsr_extension.register_domain.models")
-sys.modules["openg2p_registry_nsr_extension.register_domain"] = register_domain_pkg
-sys.modules["openg2p_registry_nsr_extension.register_domain.services"] = register_domain_pkg.services
-sys.modules["openg2p_registry_nsr_extension.register_domain.models"] = register_domain_pkg.models
+register_domain_pkg = ModuleType("openg2p_registry_vsss_extension.register_domain")
+register_domain_pkg.services = ModuleType("openg2p_registry_vsss_extension.register_domain.services")
+register_domain_pkg.models = ModuleType("openg2p_registry_vsss_extension.register_domain.models")
+sys.modules["openg2p_registry_vsss_extension.register_domain"] = register_domain_pkg
+sys.modules["openg2p_registry_vsss_extension.register_domain.services"] = register_domain_pkg.services
+sys.modules["openg2p_registry_vsss_extension.register_domain.models"] = register_domain_pkg.models
 
 enums_spec = importlib.util.spec_from_file_location(
-    "openg2p_registry_nsr_extension.register_domain.models.enums",
+    "openg2p_registry_vsss_extension.register_domain.models.enums",
     ROOT / "register_domain/models/enums.py",
 )
 enums_module = importlib.util.module_from_spec(enums_spec)
 assert enums_spec.loader is not None
 enums_spec.loader.exec_module(enums_module)
-sys.modules["openg2p_registry_nsr_extension.register_domain.models.enums"] = enums_module
+sys.modules["openg2p_registry_vsss_extension.register_domain.models.enums"] = enums_module
 DisabilityStatusEnum = enums_module.DisabilityStatusEnum
 
 sync_mod_spec = importlib.util.spec_from_file_location(
-    "openg2p_registry_nsr_extension.register_domain.services.disability_status_sync",
+    "openg2p_registry_vsss_extension.register_domain.services.disability_status_sync",
     ROOT / "register_domain/services/disability_status_sync.py",
 )
 sync_module = importlib.util.module_from_spec(sync_mod_spec)

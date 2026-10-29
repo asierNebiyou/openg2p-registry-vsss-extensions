@@ -34,7 +34,7 @@ class G2PRegisterIndividual(G2PRegister, G2PPerson, G2PGeo, G2PRegisterAuthentic
 
     # Contact and Location
     address_descriptor: Mapped[str] = mapped_column(String, nullable=True)
-    kebele_code: Mapped[str] = mapped_column(String, nullable=True)
+    village_code: Mapped[str] = mapped_column(String, nullable=True)
     locality_ea_code: Mapped[str] = mapped_column(String, nullable=True)
     gps_latitude: Mapped[float] = mapped_column(Numeric, nullable=True)
     gps_longitude: Mapped[float] = mapped_column(Numeric, nullable=True)
@@ -108,7 +108,7 @@ class G2PIntakeFormIndividual(G2PIntakeForm, G2PRegister, G2PPerson, G2PGeo):
 
     # Contact and Location
     address_descriptor: Mapped[str] = mapped_column(String, nullable=True)
-    kebele_code: Mapped[str] = mapped_column(String, nullable=True)
+    village_code: Mapped[str] = mapped_column(String, nullable=True)
     locality_ea_code: Mapped[str] = mapped_column(String, nullable=True)
     gps_latitude: Mapped[float] = mapped_column(Numeric, nullable=True)
     gps_longitude: Mapped[float] = mapped_column(Numeric, nullable=True)
@@ -190,7 +190,7 @@ class G2PRegisterHistoryIndividual(G2PRegisterHistory, G2PPersonHistory, G2PGeoH
     
     # Contact and Location
     address_descriptor: Mapped[str] = mapped_column(String, nullable=True)
-    kebele_code: Mapped[str] = mapped_column(String, nullable=True)
+    village_code: Mapped[str] = mapped_column(String, nullable=True)
     locality_ea_code: Mapped[str] = mapped_column(String, nullable=True)
     gps_latitude: Mapped[float] = mapped_column(Numeric, nullable=True)
     gps_longitude: Mapped[float] = mapped_column(Numeric, nullable=True)

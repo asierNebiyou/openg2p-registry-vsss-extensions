@@ -1,72 +1,38 @@
-# MGLSD VSSS DB-seed image.
+# MGLSD Village Social Security System — DB-seed image.
 #
-# Postgres-client image that ships:
-#   - meta_data SQL from the openg2p-registry-vsss-extension
-#   - flat Jinja templates from the openg2p-registry-vsss-extension
-#   - openg2p-data repo (cloned at build time) containing demography JSON,
-#     VSSS sub-table JSON and profile images
-# At container-run time it:
-#   - applies meta_data SQL against Postgres
-#   - optionally loads sample data from openg2p-data JSON via load_sample_data.py
-#   - optionally uploads profile images to MinIO via upload_images.py
-#   - optionally uploads Jinja templates to MinIO via upload_templates.py
+# Thin extension of the registry-platform db-seed base image. Clears the
+# reference (farmer) seed content and replaces it with VSSS's meta_data,
+# awe_meta_data, templates and sample seed JSON.
+# Overrides the farmer-shaped loaders with the VSSS ones. No master_data is
+# shipped: VSSS has no inbound connectors, so there are no sender partners
+# to register.
 #
-# Build context = repo root (so that openg2p-registry-vsss-extension/ and
+# The base image already provides psql, the Python seed runtime,
+# load_attributes_from_mds.py and sync_geo_widgets.py, so this image no longer
+# builds from postgres:16-alpine and no longer clones openg2p-data at build
+# time — sample data comes from the base image's data dir (OPENG2P_DATA_DIR).
+#
+# Build context = repo root (so openg2p-registry-vsss-extension/ and
 # docker/db-seed/ are both reachable).
+ARG RP_VERSION=1.2.2-rc.544
+FROM openg2p/openg2p-registry-db-seed:${RP_VERSION}
 
-ARG EXTENSION_FOLDER=openg2p-registry-vsss-extension
+ENV EXTENSION_FOLDER=openg2p-registry-vsss-extension
 
-FROM postgres:16-alpine
+RUN rm -rf /seed/meta_data/* /seed/awe_meta_data/* /seed/templates/* /seed/seed-data/* /seed/master_data/* \
+ && mkdir -p /seed/awe_meta_data
 
-ARG EXTENSION_FOLDER
-ARG GIT_COMMIT=dev
-ARG BUILD_TIME=dev
-ARG OPENG2P_DATA_REPO=https://github.com/openg2p/openg2p-data.git
-ARG OPENG2P_DATA_BRANCH=2.0
+COPY openg2p-registry-vsss-extension/src/openg2p_registry_vsss_extension/meta_data/      /seed/meta_data/
+COPY openg2p-registry-vsss-extension/src/openg2p_registry_vsss_extension/awe_meta_data/  /seed/awe_meta_data/
+COPY openg2p-registry-vsss-extension/src/openg2p_registry_vsss_extension/templates/      /seed/templates/
+COPY docker/db-seed/seed-data/                                                           /seed/seed-data/
 
-ENV GIT_COMMIT=${GIT_COMMIT} \
-    BUILD_TIME=${BUILD_TIME} \
-    EXTENSION_FOLDER=${EXTENSION_FOLDER} \
-    OPENG2P_DATA_DIR=/openg2p-data
+# VSSS domain-specific loaders + entrypoint (AWE seed step).
+COPY docker/db-seed/load_sample_data.py  /seed/load_sample_data.py
+COPY docker/db-seed/load_geo_data.py     /seed/load_geo_data.py
+COPY docker/db-seed/upload_images.py     /seed/upload_images.py
+COPY docker/db-seed/upload_templates.py  /seed/upload_templates.py
+COPY docker/db-seed/entrypoint.sh        /seed/entrypoint.sh
 
-RUN apk add --no-cache python3 py3-pip py3-psycopg2 git
-
-COPY docker/db-seed/requirements.txt /tmp/requirements.txt
-RUN pip3 install --no-cache-dir --break-system-packages -r /tmp/requirements.txt && \
-    rm /tmp/requirements.txt
-
-# Copy meta-data SQL and flat templates from the extension source tree.
-# (sample_data/ no longer exists in the extension — data lives in openg2p-data.)
-COPY ${EXTENSION_FOLDER}/src/ /tmp/ext-src/
-
-RUN mkdir -p /seed/meta_data /seed/master_data /seed/templates && \
-    find /tmp/ext-src -maxdepth 2 -type d -name meta_data | while read d; do \
-      cp -r "$d"/* /seed/meta_data/ 2>/dev/null || true; \
-    done && \
-    find /tmp/ext-src -maxdepth 2 -type d -name master_data | while read d; do \
-      cp -r "$d"/* /seed/master_data/ 2>/dev/null || true; \
-    done && \
-    find /tmp/ext-src -maxdepth 2 -type d -name templates | while read d; do \
-      find "$d" -maxdepth 1 -type f -name '*.j2' -exec cp {} /seed/templates/ \; ; \
-    done && \
-    rm -rf /tmp/ext-src
-
-# Clone openg2p-data (demography JSON, VSSS sub-table JSON, images).
-RUN git clone --depth 1 -b ${OPENG2P_DATA_BRANCH} ${OPENG2P_DATA_REPO} /openg2p-data \
-    && rm -rf /openg2p-data/.git
-
-# Optional seed-data JSON assets (dormant until load_sample_data is wired to them).
-COPY docker/db-seed/seed-data/ /seed/seed-data/
-
-COPY docker/db-seed/entrypoint.sh /seed/entrypoint.sh
-COPY docker/db-seed/upload_templates.py /seed/upload_templates.py
-COPY docker/db-seed/upload_images.py /seed/upload_images.py
-COPY docker/db-seed/load_sample_data.py /seed/load_sample_data.py
-COPY docker/db-seed/load_geo_data.py /seed/load_geo_data.py
-RUN chmod +x /seed/entrypoint.sh \
-             /seed/upload_templates.py \
-             /seed/upload_images.py \
-             /seed/load_sample_data.py \
-             /seed/load_geo_data.py
-
-ENTRYPOINT ["/seed/entrypoint.sh"]
+RUN chmod +x /seed/load_sample_data.py /seed/load_geo_data.py \
+             /seed/upload_images.py /seed/upload_templates.py /seed/entrypoint.sh

@@ -1,0 +1,35 @@
+name: Checks
+
+# Fast, Docker-free checks that gate a change before the build:
+#   * the openg2p-registry pin must stay in lockstep across the Dockerfiles and
+#     the Helm chart dependency (test/test_rp_pin_lockstep.py)
+#   * the vsss-extension's own unit tests
+
+on:
+  push:
+    branches: ["**", "!dependabot/**"]
+  pull_request:
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --quiet pytest
+      - name: openg2p-registry pin lockstep
+        run: python -m pytest test/test_rp_pin_lockstep.py -q
+
+  extension-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install the extension and run its tests
+        run: |
+          pip install --quiet ./openg2p-registry-vsss-extension pytest
+          python -m pytest openg2p-registry-vsss-extension/tests -q
