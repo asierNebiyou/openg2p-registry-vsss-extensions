@@ -15,7 +15,10 @@
 # Build context = repo root (so openg2p-registry-vsss-extension/ and
 # docker/db-seed/ are both reachable).
 ARG RP_VERSION=1.2.2-rc.557
-FROM --platform=linux/amd64 openg2p/openg2p-registry-db-seed:${RP_VERSION}
+# Base images are published for linux/amd64 only; a variable keeps buildkit
+# from warning about a constant --platform (FromPlatformFlagConstDisallowed).
+ARG BASE_PLATFORM=linux/amd64
+FROM --platform=${BASE_PLATFORM} openg2p/openg2p-registry-db-seed:${RP_VERSION}
 
 ENV EXTENSION_FOLDER=openg2p-registry-vsss-extension
 

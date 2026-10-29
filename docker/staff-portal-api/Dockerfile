@@ -14,7 +14,10 @@
 # docker/.build-wheels/ (produced by make docker-vsss-build / docker-vsss-build.sh)
 # so this RUN step never needs PyPI for hatchling.
 ARG RP_VERSION=1.2.2-rc.557
-FROM --platform=linux/amd64 openg2p/openg2p-registry-staff-api:${RP_VERSION}
+# Base images are published for linux/amd64 only; a variable keeps buildkit
+# from warning about a constant --platform (FromPlatformFlagConstDisallowed).
+ARG BASE_PLATFORM=linux/amd64
+FROM --platform=${BASE_PLATFORM} openg2p/openg2p-registry-staff-api:${RP_VERSION}
 
 ENV REGISTRY_EXTENSION_MODULE=openg2p_registry_vsss_extension
 
