@@ -4,7 +4,7 @@
 # Shared by docker/staff-portal-api, docker/partner-api and docker/celery so the
 # three cannot drift.
 #
-# Why this is not a bare `pip install`:
+# Why this is not a bare `pip install` of the source tree:
 #
 #   The base image is the runtime. It already carries the stack the platform
 #   itself runs on -- openg2p-fastapi-common, openg2p-g2pconnect-common-lib,
@@ -17,6 +17,12 @@
 #       error: command 'gcc' failed: No such file or directory
 #       note: This error originates from a subprocess, and is likely not a
 #             problem with pip.
+#
+#   Installing from a source tree also triggers a PEP 517 build (hatchling).
+#   That needs PyPI at image-build time. Many Docker Desktop / CI runners can
+#   pull Hub images but cannot reach pypi.org (Network unreachable). So the
+#   preferred path is a prebuilt .whl copied into the build context — pip
+#   installs the wheel with --no-deps and never talks to the network.
 #
 # So: install the extension alone (--no-deps), then PROVE the base really does
 # satisfy it. If the assertion fails, fall back to a full install with build
@@ -31,8 +37,20 @@ MODULE=openg2p_registry_vsss_extension
 # Modules the extension expects from the base image.
 REQUIRED="openg2p_fastapi_common openg2p_registry_core sqlalchemy pydantic"
 
-echo "[install-extension] installing ${DIST} from ${EXT_DIR} (--no-deps)"
-pip install --no-cache-dir --no-deps "$EXT_DIR"
+install_extension() {
+    # Prefer a prebuilt wheel (no hatchling / PyPI needed). Fall back to the
+    # source tree when no wheel is present (environments that can reach PyPI).
+    WHEEL="$(find "$EXT_DIR" -maxdepth 1 -name 'openg2p_registry_vsss_extension-*.whl' 2>/dev/null | head -n 1 || true)"
+    if [ -n "$WHEEL" ] && [ -f "$WHEEL" ]; then
+        echo "[install-extension] installing ${DIST} from wheel $(basename "$WHEEL") (--no-deps)"
+        pip install --no-cache-dir --no-deps "$WHEEL"
+    else
+        echo "[install-extension] installing ${DIST} from ${EXT_DIR} (--no-deps)"
+        pip install --no-cache-dir --no-deps "$EXT_DIR"
+    fi
+}
+
+install_extension
 
 assert_runtime() {
     for m in $REQUIRED; do
@@ -51,14 +69,16 @@ if assert_runtime; then
 fi
 
 echo "[install-extension] base image is missing something; retrying with build tooling"
+# Full resolve: reinstall from the same target we used above (wheel or source).
+RETRY_TARGET="${WHEEL:-$EXT_DIR}"
 if command -v apk >/dev/null 2>&1; then
     apk add --no-cache --virtual .ext-build gcc libc-dev linux-headers make
-    pip install --no-cache-dir "$EXT_DIR"
+    pip install --no-cache-dir "$RETRY_TARGET"
     apk del --no-network .ext-build
 elif command -v apt-get >/dev/null 2>&1; then
     apt-get update
     apt-get install -y --no-install-recommends gcc libc6-dev make
-    pip install --no-cache-dir "$EXT_DIR"
+    pip install --no-cache-dir "$RETRY_TARGET"
     apt-get purge -y gcc libc6-dev make
     apt-get autoremove -y
     rm -rf /var/lib/apt/lists/*
