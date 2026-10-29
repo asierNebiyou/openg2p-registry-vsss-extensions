@@ -2753,7 +2753,7 @@
     "Enter longitude": "Enter longitude",
     "Estimated Age": "Estimated Age",
     "Exit Date": "Exit Date",
-    "Fayda ID": "Fayda ID",
+    "National ID": "National ID",
     "First Name": "First Name",
     "Functional Record ID": "Functional Record ID",
     "GPS Accuracy": "GPS Accuracy",

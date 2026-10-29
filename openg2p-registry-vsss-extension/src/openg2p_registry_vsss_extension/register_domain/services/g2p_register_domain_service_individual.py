@@ -56,7 +56,7 @@ class G2PRegisterDomainServiceIndividual(G2PRegisterDomainService):
             )
 
     def _validate_identifier(self, record: dict) -> None:
-        """Require at least one of Fayda ID or RID."""
+        """Require at least one of National ID or RID."""
         if record.get("edit_action") == "DELETE":
             return
 
@@ -70,7 +70,7 @@ class G2PRegisterDomainServiceIndividual(G2PRegisterDomainService):
             # clears spurious identifier fields to None before validation.
             if record.get("has_national_id") is None:
                 return
-            validation_error("Either Fayda ID or RID is required")
+            validation_error("Either National ID or RID is required")
 
     def construct_search_text(self, payload: dict, extra: list[str] = None) -> str:
         _logger.info("Constructing search text for individual")

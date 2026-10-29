@@ -103,10 +103,30 @@ run_callback_secret() {
   AWE_CALLBACK_SECRET_ID="${AWE_CALLBACK_SECRET_ID:-registry}"
   echo "[db-seed]   -> callback_secret (AWE DB) id=${AWE_CALLBACK_SECRET_ID} caller_service=${AWE_CALLBACK_CALLER_SERVICE}"
   export AWE_CALLBACK_HMAC_SECRET AWE_CALLBACK_SECRET_ID AWE_CALLBACK_CALLER_SERVICE
+
+  # callback_secret is created by AWE's own migrations, which can still be
+  # running when the seed gets here — the insert then failed with
+  # `relation "public.callback_secret" does not exist`. ON_ERROR_STOP=0 meant
+  # psql reported that on stderr and still exited 0, so the seed, the container
+  # and the whole bring-up all reported success with no callback secret at all.
+  # Wait for the table, then let a real failure be a failure.
+  i=0
+  until PGHOST="${AWE_PGHOST}" PGPORT="${AWE_PGPORT:-5432}" PGDATABASE="${AWE_PGDATABASE}" \
+        PGUSER="${AWE_PGUSER}" PGPASSWORD="${AWE_PGPASSWORD}" \
+        psql -tAc "SELECT to_regclass('public.callback_secret') IS NOT NULL" 2>/dev/null | grep -q '^t$'; do
+    i=$((i + 1))
+    if [ "$i" -ge 60 ]; then
+      echo "[db-seed] ERROR: public.callback_secret did not appear after 120s (AWE migrations incomplete)." >&2
+      return 1
+    fi
+    [ "$i" = 1 ] && echo "[db-seed]      waiting for AWE migrations to create callback_secret ..."
+    sleep 2
+  done
+
   PGHOST="${AWE_PGHOST}" PGPORT="${AWE_PGPORT:-5432}" PGDATABASE="${AWE_PGDATABASE}" \
     PGUSER="${AWE_PGUSER}" PGPASSWORD="${AWE_PGPASSWORD}" \
     envsubst '${AWE_CALLBACK_HMAC_SECRET} ${AWE_CALLBACK_SECRET_ID} ${AWE_CALLBACK_CALLER_SERVICE}' < "$tpl" \
-    | psql -v ON_ERROR_STOP=0 -f -
+    | psql -v ON_ERROR_STOP=1 -f -
 }
 
 echo "============================================="
