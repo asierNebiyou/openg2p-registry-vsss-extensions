@@ -104,29 +104,39 @@ run_callback_secret() {
   echo "[db-seed]   -> callback_secret (AWE DB) id=${AWE_CALLBACK_SECRET_ID} caller_service=${AWE_CALLBACK_CALLER_SERVICE}"
   export AWE_CALLBACK_HMAC_SECRET AWE_CALLBACK_SECRET_ID AWE_CALLBACK_CALLER_SERVICE
 
-  # callback_secret is created by AWE's own migrations, which can still be
-  # running when the seed gets here — the insert then failed with
-  # `relation "public.callback_secret" does not exist`. ON_ERROR_STOP=0 meant
-  # psql reported that on stderr and still exited 0, so the seed, the container
-  # and the whole bring-up all reported success with no callback secret at all.
-  # Wait for the table, then let a real failure be a failure.
-  i=0
-  until PGHOST="${AWE_PGHOST}" PGPORT="${AWE_PGPORT:-5432}" PGDATABASE="${AWE_PGDATABASE}" \
-        PGUSER="${AWE_PGUSER}" PGPASSWORD="${AWE_PGPASSWORD}" \
-        psql -tAc "SELECT to_regclass('public.callback_secret') IS NOT NULL" 2>/dev/null | grep -q '^t$'; do
-    i=$((i + 1))
+  # callback_secret is created by AWE's own migrations, which are still running
+  # when the seed gets here — db-seed is started with `run --no-deps`, so
+  # nothing makes it wait for AWE. The insert failed with
+  # `relation "public.callback_secret" does not exist`, and under
+  # ON_ERROR_STOP=0 psql printed that to stderr and still exited 0: the seed,
+  # the container and the whole bring-up reported success with no callback
+  # secret at all.
+  #
+  # Checking the table exists first is not enough. Mid-migration the table can
+  # be visible to one connection and gone again moments later (seen here: the
+  # probe returned t, the insert that followed still said it did not exist), so
+  # retry the insert itself and let the last attempt's failure stand. The
+  # statement is ON CONFLICT DO UPDATE, so repeating it is harmless.
+  i=1
+  while : ; do
+    if PGHOST="${AWE_PGHOST}" PGPORT="${AWE_PGPORT:-5432}" PGDATABASE="${AWE_PGDATABASE}" \
+       PGUSER="${AWE_PGUSER}" PGPASSWORD="${AWE_PGPASSWORD}" \
+       envsubst '${AWE_CALLBACK_HMAC_SECRET} ${AWE_CALLBACK_SECRET_ID} ${AWE_CALLBACK_CALLER_SERVICE}' < "$tpl" \
+       | psql -v ON_ERROR_STOP=1 -f - 2>/tmp/cbs.err; then
+      [ "$i" -gt 1 ] && echo "[db-seed]      callback_secret written after ${i} attempts."
+      rm -f /tmp/cbs.err
+      return 0
+    fi
     if [ "$i" -ge 60 ]; then
-      echo "[db-seed] ERROR: public.callback_secret did not appear after 120s (AWE migrations incomplete)." >&2
+      echo "[db-seed] ERROR: callback_secret insert still failing after 120s — AWE migrations never finished:" >&2
+      cat /tmp/cbs.err >&2
+      rm -f /tmp/cbs.err
       return 1
     fi
-    [ "$i" = 1 ] && echo "[db-seed]      waiting for AWE migrations to create callback_secret ..."
+    [ "$i" = 1 ] && echo "[db-seed]      AWE migrations still running — retrying callback_secret ..."
+    i=$((i + 1))
     sleep 2
   done
-
-  PGHOST="${AWE_PGHOST}" PGPORT="${AWE_PGPORT:-5432}" PGDATABASE="${AWE_PGDATABASE}" \
-    PGUSER="${AWE_PGUSER}" PGPASSWORD="${AWE_PGPASSWORD}" \
-    envsubst '${AWE_CALLBACK_HMAC_SECRET} ${AWE_CALLBACK_SECRET_ID} ${AWE_CALLBACK_CALLER_SERVICE}' < "$tpl" \
-    | psql -v ON_ERROR_STOP=1 -f -
 }
 
 echo "============================================="
