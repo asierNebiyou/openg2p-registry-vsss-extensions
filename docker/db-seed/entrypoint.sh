@@ -153,10 +153,13 @@ else
   echo "[db-seed] Skipping geo-widget sync (SYNC_GEO_WIDGETS=${SYNC_GEO_WIDGETS})."
 fi
 
-# 3. Sample data.
+# 3. Sample data. Soft-fail: meta/geo/templates are enough for a working stack;
+# sample JSON schemas vary by country pack and must not abort seed.
 if [ "$LOAD_SAMPLE_DATA" = "true" ]; then
   echo "[db-seed] Loading sample data ..."
-  python3 /seed/load_sample_data.py
+  if ! python3 /seed/load_sample_data.py; then
+    echo "[db-seed] WARNING: sample data load failed; continuing without sample registrants."
+  fi
 else
   echo "[db-seed] Skipping sample data (LOAD_SAMPLE_DATA=${LOAD_SAMPLE_DATA})."
 fi

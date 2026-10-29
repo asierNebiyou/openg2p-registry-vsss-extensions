@@ -18,8 +18,17 @@ SEEDER = "seeder"
 CREATED_AT = "2026-04-01 00:00:00"
 
 OPENG2P_DATA_DIR = Path(os.environ.get("OPENG2P_DATA_DIR", "/openg2p-data"))
-DEMO_DIR = OPENG2P_DATA_DIR / "demography"
-DATA_DIR = OPENG2P_DATA_DIR / "national-social-registry"
+# Platform data pack ships JSON samples under packs/<country>/samples/ (CSV
+# under demography/ is the older format). Extension-specific sub-tables and
+# scores live in the image's /seed/seed-data/.
+COUNTRY_PACK = os.environ.get("SAMPLE_COUNTRY_PACK", os.environ.get("COUNTRY_PACK", "ETH"))
+DEMO_DIR = Path(
+    os.environ.get(
+        "SAMPLE_DEMO_DIR",
+        str(OPENG2P_DATA_DIR / "packs" / COUNTRY_PACK / "samples"),
+    )
+)
+DATA_DIR = Path(os.environ.get("SEED_DATA_DIR", "/seed/seed-data"))
 
 
 def env(name: str) -> str:
