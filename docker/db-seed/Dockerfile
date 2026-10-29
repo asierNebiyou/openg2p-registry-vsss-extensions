@@ -30,9 +30,13 @@ COPY docker/db-seed/seed-data/                                                  
 # Seed deps (minio, for the MinIO uploads). Installed explicitly rather than
 # relying on the base image, so the VSSS upload scripts cannot break if a base
 # image drops them.
+# Only install if the base image does not already provide it. The base has no
+# compiler (the platform Dockerfile apk-dels its build deps before publishing),
+# so an unnecessary resolve can fail on a transitive dep with no musllinux wheel.
 COPY docker/db-seed/requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir --break-system-packages -r /tmp/requirements.txt \
- && rm /tmp/requirements.txt
+RUN python3 -c "import minio" >/dev/null 2>&1 \
+ || pip install --no-cache-dir --break-system-packages -r /tmp/requirements.txt \
+ ; rm /tmp/requirements.txt
 
 # VSSS domain-specific loaders + entrypoint (AWE seed step).
 COPY docker/db-seed/load_sample_data.py  /seed/load_sample_data.py

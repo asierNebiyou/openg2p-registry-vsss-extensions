@@ -17,4 +17,14 @@ FROM openg2p/openg2p-registry-staff-api:${RP_VERSION}
 ENV REGISTRY_EXTENSION_MODULE=openg2p_registry_vsss_extension
 
 COPY openg2p-registry-vsss-extension/ /app/vsss-extension/
-RUN pip install --no-cache-dir /app/vsss-extension
+# --no-deps is deliberate. The base image already carries the whole runtime the
+# platform itself runs on (openg2p-fastapi-common, openg2p-g2pconnect-common-lib,
+# sqlalchemy, pydantic, the DB driver), and it has no compiler: the platform
+# Dockerfile installs gcc/libc-dev as a virtual .build-deps package and runs
+# `apk del` before the image is published. The fat build this image replaced did
+# its pip install WHILE those build deps were present, so a transitive dependency
+# with no musllinux wheel could still compile. Here it cannot, and pip fails with
+# "command 'gcc' failed: No such file or directory ... likely not a problem with
+# pip". Installing only this package avoids resolving transitive deps that the
+# base image already satisfies.
+RUN pip install --no-cache-dir --no-deps /app/vsss-extension

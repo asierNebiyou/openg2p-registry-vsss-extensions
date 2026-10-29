@@ -22,10 +22,12 @@ classifiers = [
 dependencies = [
   "openg2p-fastapi-common >=1.1.2",
   "openg2p-g2pconnect-common-lib >=1.1.0",
-  "greenlet",
-  "psycopg[binary]",
 ]
 
+# greenlet and psycopg[binary] are intentionally NOT listed. The base image
+# already provides the DB stack, and declaring them made pip resolve and try to
+# build dependencies inside an image with no compiler. The images install this
+# package with --no-deps for the same reason.
 dynamic = ["version"]
 
 [project.urls]
