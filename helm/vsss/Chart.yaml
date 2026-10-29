@@ -49,7 +49,7 @@ dependencies:
     version: 2.30.0
   - name: openg2p-registry
     alias: registry
-    version: 1.2.2-rc.544
+    version: 1.2.2-rc.557
     repository: https://openg2p.github.io/openg2p-helm
 
 annotations:

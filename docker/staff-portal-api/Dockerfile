@@ -11,7 +11,7 @@
 # test/test_rp_pin_lockstep.py fails the build if they drift.
 #
 # Build context = repo root (so openg2p-registry-vsss-extension/ is reachable).
-ARG RP_VERSION=1.2.2-rc.544
+ARG RP_VERSION=1.2.2-rc.557
 FROM openg2p/openg2p-registry-staff-api:${RP_VERSION}
 
 ENV REGISTRY_EXTENSION_MODULE=openg2p_registry_vsss_extension

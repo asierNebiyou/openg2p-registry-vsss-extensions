@@ -14,7 +14,7 @@
 #
 # Build context = repo root (so openg2p-registry-vsss-extension/ and
 # docker/db-seed/ are both reachable).
-ARG RP_VERSION=1.2.2-rc.544
+ARG RP_VERSION=1.2.2-rc.557
 FROM openg2p/openg2p-registry-db-seed:${RP_VERSION}
 
 ENV EXTENSION_FOLDER=openg2p-registry-vsss-extension
